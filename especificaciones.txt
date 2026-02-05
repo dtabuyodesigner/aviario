@@ -1,0 +1,393 @@
+ESPECIFICACIÓN TÉCNICA MAESTRA: PROYECTO AVIARIO (ANTI-GRAVITY)
+Documento consolidado con todas las tablas, relaciones y lógica de negocio definidas hasta el 01/02/2026.
+
+1. ESTRUCTURA DE BASE DE DATOS (BACKEND)
+A. Tabla PÁJAROS (Inventario)
+
+• ID_Ave (PK): Identificador interno.
+
+• Anilla (Unique): Identificador visual único.
+
+• Especie: Selector (Psitácidas/Canarios).
+
+• Mutación Visual (Fenotipo): Lo que se ve.
+
+• Portador De (Genotipo): Editable manual o calculado.
+
+• Sexo: Macho / Hembra / Pendiente.
+
+• Fecha_Nacimiento: Para cálculo de edad.
+
+• Origen: Nacido en casa / Adquirido.
+
+• ID_Padre / ID_Madre: Opcionales (NULL permitidos).
+
+• ID_Criador_Externo (FK): Vincula a tabla Contactos.
+
+• Estado: Activo / Baja (Histórico).
+
+B. Tabla CONTACTOS (Agenda Global)
+
+• ID_Contacto (PK)
+
+• Tipo: Comprador / Vendedor / Veterinario.
+
+• Nombre / Razón Social
+
+• DNI / CIF: Obligatorio para documentos legales.
+
+• Nº Criador Nacional: Para trazabilidad de anillas externas.
+
+• Teléfono & Email
+
+• Dirección: Para envíos.
+
+C. Tabla CRUCES (Parejas)
+
+• ID_Cruce (PK)
+
+• ID_Macho (FK) & ID_Hembra (FK)
+
+• Especie: Verificación automática (Alerta de Hibridación si son distintas).
+
+• Variedad_Objetivo: Texto libre (ej. "Línea Azul").
+
+• Estado: Juntos / Separados.
+
+• Fecha_Union
+
+D. Tabla NIDADAS (Producción)
+
+• ID_Nidada (PK)
+
+• ID_Cruce (FK): Vincula a la pareja.
+
+• Anilla_Macho & Anilla_Hembra: Visibles para referencia rápida.
+
+• Numero_Nidada: 1ª, 2ª, 3ª del año.
+
+• Fecha_Primer_Huevo
+
+• Contadores: Huevos Totales, Fértiles, Nacidos, Anillados.
+
+E. Tabla MOVIMIENTOS (Económico/Bajas)
+
+• ID_Movimiento (PK)
+
+• ID_Ave (FK)
+
+• Tipo_Evento: Venta / Cesión / Defunción / Robo.
+
+• ID_Contacto (FK): Comprador (si aplica).
+
+• Causa_Baja: Texto (si es defunción).
+
+• Precio_Venta
+
+• Gastos_Asociados: (Sexaje, Envío) -> Para cálculo de Beneficio Neto.
+
+---
+
+2. RELACIONES CLAVE
+1. Genealogía: Tabla Pájaros se referencia a sí misma (Hijo -> Padres).
+
+2. Producción: 1 Cruce -> N Nidadas -> N Pájaros (Hijos).
+
+3. Transacciones: 1 Contacto -> N Movimientos.
+
+---
+
+3. LÓGICA DE AUTOMATIZACIÓN (FRONTEND)
+Regla 1: Trigger de Cruce
+
+• SI creo un registro en CRUCES...
+
+• ENTONCES el sistema crea automáticamente el registro en NIDADAS (Nidada nº1) heredando anillas y especies.
+
+Regla 2: Alta Rápida de Pollos
+
+• INPUT: Campo "Nº Pollos Vivos/Anillados".
+
+• ACCIÓN: Se generan automáticamente X filas en el formulario.
+
+• PRE-RELLENADO: Las nuevas filas heredan Especie y Anillas de Padres.
+
+• SINCRONIZACIÓN: Si borro una fila manual, el contador total se actualiza solo (y viceversa).
+
+• SEGURIDAD: Confirmación antes de borrar una fila que ya tenga datos.
+
+Regla 3: Alerta de Especies
+
+• Si Especie(Macho) != Especie(Hembra) -> POP-UP: "¿Confirmar hibridación?".
+
+Regla 4: Integridad Histórica
+
+• Los pájaros "Baja" NUNCA se borran. Solo cambian de estado para mantener los árboles genealógicos intactos.
+
+
+
+
+F. Tabla RECETAS (Botiquín y Despensa)
+  - ID_Receta (PK)
+  - Nombre_Receta
+  - Para_que_sirve (Indicaciones)
+  - Dosis_Aplicacion
+  - Slots de Ingredientes: 8 espacios reservados (Ingrediente + Cantidad), siendo opcionales.
+
+
+
+
+G. Tabla TRATAMIENTOS (Hospital)
+  - ID_Tratamiento (PK)
+  - ID_Ave (FK) -> Activa icono alerta visual.
+  - ID_Receta (FK)
+  - Fechas (Inicio/Fin) y Sintomas.
+  - Resultado (Curado/Baja).
+
+H. Tabla INVENTARIO (Stock Anillas y Suministros)
+  - ID_Material (PK)
+  - Categoria (Anillas/Medicina/Comida)
+  - Stock_Actual y Stock_Minimo.
+  - *Trigger:* Al anillar un pollo, resta 1 al stock de ese calibre.
+
+I. Tabla CALENDARIO (Motor de Alertas)
+  - ID_Evento (PK)
+  - Tipo (Eclosión, Anillado, Destete)
+  - Fecha_Prevista (Calculada automáticamente según especie).
+  - Estado (Pendiente/Completado).
+
+J. Tabla ARCHIVOS (Fotos y Documentos)
+  - ID_Archivo (PK)
+  - ID_Vinculo (ID_Ave o ID_Movimiento).
+  - Tipo (Foto, Sexaje PDF, Factura).
+  - Ruta del archivo.
+
+
+
+
+4. NAVEGACIÓN Y BÚSQUEDA (UX/UI)
+Regla: Buscador Global Omnipresente
+  - Ubicación: Barra fija superior en todas las pantallas.
+  - Filtros Facetados: Permite filtrar por Especie + Sexo + Mutación + Estado (Ej: "Ver solo Machos Agapornis Ancestrales").
+  - Búsqueda Rápida: Por número de anilla (tecleando "023" aparecen coincidencias).
+
+Regla: Ficha Rápida de Ave (Modal)
+  - Acción: Al hacer clic en una anilla (en buscador o listas).
+  - Formato: Ventana emergente (Pop-up).
+  - Contenido:
+    1. Resumen: Foto, Sexo, Edad.
+    2. Genética: Mutaciones y Portadores.
+    3. Árbol Genealógico: Enlace visual a padres.
+    4. Historial: Resumen de nidadas y salud.
+
+
+
+
+DETALLE VISUAL DE LA FICHA (Al hacer click en Anilla)
+Se debe abrir una ventana con 4 pestañas o bloques claros:
+1. CABECERA (Lo más visual):
+   - Foto en grande (si hay).
+   - Nº Anilla (Bien grande).
+   - Especie y Sexo (Icono Macho/Hembra).
+   - Estado (Vivo/Baja).
+
+2. DATOS BIOMÉTRICOS:
+   - Fecha de Nacimiento y Edad exacta (calculada: "2 años y 3 meses").
+   - Mutación Visual y Portadores.
+   - Ubicación actual (Jaula X o Voladera Y).
+
+3. GENEALOGÍA (Links activos):
+   - Padre: [Anilla XXX] (Clickable).
+   - Madre: [Anilla YYY] (Clickable).
+   - Hermanos de nidada (Lista rápida).
+
+4. DOCUMENTACIÓN:
+   - Botón para ver PDF Sexaje.
+   - Historial de Nidadas (si ha criado).
+
+
+
+
+K. Tabla CONFIGURACIÓN (Tus Datos / Vendedor)
+  - Solo 1 registro (Tú).
+  - Campos: Nombre, DNI, Nº Criador, Dirección, Logo y Firma Digital.
+  - Uso: Se inyecta automáticamente como "CEDENTE" en los documentos.
+
+
+
+
+L. VISTA DE DISPONIBLES (Stock de Venta)
+  - Filtro Automático: Muestra solo pájaros marcados como "Activos" que no formen parte de una pareja actual.
+  - Funcionalidad: 
+    1. Visualización de "Galería de Venta".
+    2. Botón "Vender": Ejecuta la lógica de PDF de Cesión usando los datos del Comprador (Tabla Contactos) y del Vendedor (Tabla Configuración).
+    3. Al completar la venta, el estado del ave cambia automáticamente a "Baja (Vendido)".
+
+
+
+
+M. MÓDULO DE CONSANGUINIDAD (Lógica de Backend)
+  - Función: Antes de validar un Cruce, rastrea IDs de padres y abuelos.
+  - Alerta: Notificación visual si el parentesco es directo (Hermanos, Padre-Hija, etc.).
+
+N. Tabla UBICACIONES (Control de Jaulas)
+  - ID_Jaula (PK)
+  - Codigo_Jaula y Tipo (Cría, Voladera).
+  - Estado de Higiene (Fecha última desinfección).
+  - Relación: Cada Ave tiene un ID_Jaula asignado.
+
+O. DICCIONARIO MAESTRO (Normalización)
+  - Tablas auxiliares de Especies y Mutaciones predefinidas para evitar errores de escritura y asegurar que el buscador funcione correctamente.
+
+
+
+
+P. REGLA DE BAJAS E INTEGRIDAD REFERENCIAL
+  - Prohibición de Borrado Físico: Ningún ave que haya tenido descendencia o número de anilla puede ser eliminada de la base de datos.
+  - Gestión de Stock: Al asignar un motivo de baja (Venta, Deceso, Escape), el ave desaparece automáticamente de la "Vista de Disponibles" y del "Inventario Activo".
+  - Mantenimiento de Árboles: Las fichas de aves en estado "Baja" permanecen accesibles únicamente a través de los enlaces de parentesco (Padres/Abuelos) para no romper la trazabilidad genética.
+
+
+
+
+Q. DISEÑO DEL DASHBOARD (Pantalla de Inicio)
+  - Estadísticas Segmentadas: El resumen superior debe agrupar los datos por Especie (Especie -> Total -> Desglose por Sexo).
+  - Indicadores de Temporada: Mostrar huevos en incubación y pollos nacidos este año, también segmentados por especie.
+  - Botonera de Navegación: Accesos directos a Inventario, Cría, Ventas, Hospital, Contactos y Configuración.
+  - Panel de Alertas Inteligentes: Lista de tareas próximas (Eclosiones, Anillado, Medicación) calculadas por el motor del Calendario.
+
+
+
+
+R. MÓDULO DE CONFIGURACIÓN Y AGENDA
+  - Gestión "Mis Datos": Formulario para datos del titular (Vendedor) con carga de Logo y Firma.
+  - Agenda Global de Contactos: Centralización de Compradores, Vendedores externos y contactos profesionales. Vinculación directa con el historial de Movimientos.
+  - Ajustes de Especie: Configuración de parámetros biológicos (Días de incubación/anillado) para personalizar las alertas del Dashboard.
+
+
+
+
+S. DISEÑO DE "MI AVIARIO" (Inventario Activo)
+  - Interfaz: Tabla híbrida con miniaturas de fotos y datos técnicos.
+  - Columnas obligatorias: Foto, Anilla, Especie, Mutación, Sexo, Edad y Ubicación (Jaula).
+  - Sistema de Tags: Etiquetas de colores para identificar rápidamente pájaros "En Cría", "Disponibles" o "En Tratamiento".
+  - Filtros Dinámicos: Buscador superior persistente con filtros por Especie y Sexo.
+
+
+
+
+S. DISEÑO DE "MI AVIARIO" (Inventario Activo)
+  - Interfaz: Tabla híbrida con miniaturas de fotos y datos técnicos.
+  - Columna Crítica: "Disponibilidad" (Muestra si el ave está lista para venta/cesión o bloqueada por cría/tratamiento).
+  - Columnas obligatorias: Foto, Anilla, Especie, Mutación, Sexo, Edad y Ubicación (Jaula).
+  - Sistema de Tags: Etiquetas de colores para identificar rápidamente pájaros "En Cría", "Disponibles" o "En Tratamiento".
+  - Filtros Dinámicos: Buscador superior persistente con filtros por Especie, Sexo y Estado de Disponibilidad.
+
+
+
+
+T. DISEÑO DE "GESTIÓN DE CRÍA" (Nidadas Activas)
+  - Interfaz: Tabla técnica de alta densidad (Opción B).
+  - Columnas: Jaula, Pareja (Macho x Hembra), Estado Visual (Iconos huevos/pollos), Fecha próxima eclosión, Fecha anillado y Contadores de éxito.
+  - Filtros Operativos: Botones superiores para filtrar nidos por tarea del día (Eclosiones hoy, Anillados hoy, Mirar huevos).
+  - Lógica de Registro Rápido: Botones en la propia fila para añadir huevos o marcar nacimientos sin abrir menús adicionales.
+
+
+
+
+U. MOTOR DE PREDICCIÓN DE ECLOSIÓN
+  - Lógica: Fecha_Primer_Huevo + Días_Incubación (según especie) = Fecha_Nacimiento_Estimada.
+  - Alertas Visuales: Cambio de color en la fila del nido 48h antes de la fecha.
+  - Notificación en Dashboard: Inserción automática del evento en el panel de tareas del día.
+  - Ajuste manual: Si el usuario marca el nacimiento real un día antes o después, el sistema recalcula el resto de la nidada automáticamente.
+
+
+
+
+V. MÓDULO DE PREDICCIÓN GENÉTICA
+  - Lógica: Motor de cruce basado en herencia mendeliana (Dominancia, Recesividad y Ligamiento al Sexo).
+  - Input: Selección de Macho (Fenotipo/Genotipo) + Hembra (Fenotipo/Genotipo).
+  - Output: Lista de resultados probables con porcentajes de éxito para cada combinación de color y mutación.
+  - Cálculo de Portadores: El sistema marcará automáticamente a los hijos como "Portadores de X" si la genética de los padres lo garantiza (ej: padre mutado x madre ancestral).
+
+
+
+
+AJUSTE TÉCNICO - TABLA PÁJAROS:
+- Campo 'Disponible_Venta': El valor predeterminado será siempre 'NO'. Solo pasará a 'SÍ' mediante acción manual explícita del criador. Esto evita ventas accidentales de aves de reserva o reproductores.
+
+
+
+
+W. INTERACTIVIDAD DE DISPONIBLES EN DASHBOARD
+- KPI de Disponibilidad: Añadir un contador destacado en el Dashboard con el número total de aves marcadas como 'Disponible_Venta = SÍ'.
+- Desglose Dinámico (Drill-down): Al pulsar sobre este contador, el sistema debe abrir una vista rápida o aplicar un filtro automático que desglose esos ejemplares por:
+  1. Especie (Gráfico o Lista).
+  2. Sexo (Machos / Hembras / Pendientes).
+- Acceso Directo: Desde este desglose, el criador puede seleccionar aves para generar el documento de cesión de forma masiva o individual.
+
+
+
+
+X. AUTOMATIZACIÓN DE DISPONIBILIDAD PARA POLLOS
+- Lógica de Disparo: En el momento en que un pichón es registrado con su número de anilla definitivo (proceso de anillado), el campo 'Disponible_Venta' pasará automáticamente de 'NO' a 'SÍ'.
+- Propósito: Agilizar la puesta en stock de la nueva prole sin intervención manual.
+- Control del Criador: El usuario siempre podrá entrar en la ficha del pollo y marcarlo como 'NO' disponible si decide reservarlo para su propio plantel de reproductores.
+- Excepción: Esta automatización solo aplica a pollos nacidos en el aviario; las aves adultas o externas mantienen el valor 'NO' por defecto.
+
+
+
+
+Y. FUNCIONES AVANZADAS DE USABILIDAD (UX TÁCTICO)
+  - Arquitectura Offline-First: Capacidad de registro de datos sin conexión a internet y sincronización automática posterior.
+  - Acciones Masivas: Herramienta de selección múltiple en inventario para realizar movimientos de jaula o cambios de estado en bloque.
+  - Entrada de Datos por Voz: Integración de dictado inteligente para rellenar campos de nidadas y observaciones sin usar las manos.
+  - Escaneo OCR de Anillas: Uso de la cámara del dispositivo para identificar números de anilla y abrir fichas técnicas de forma instantánea.
+
+
+
+
+Z. DESPLIEGUE MULTIPLATAFORMA Y SINCRONIZACIÓN
+- Arquitectura Dual: El sistema debe ser accesible vía Web (Escritorio) y App (Móvil - iOS/Android).
+- Sincronización en Tiempo Real: Cualquier cambio realizado en el móvil (ej: registrar un nacimiento) debe reflejarse instantáneamente en la versión de escritorio y viceversa.
+- Diseño Responsivo Adaptado: 
+  - Desktop: Optimizado para visualización de tablas extensas y gestión documental.
+  - Móvil: Optimizado para interacciones táctiles rápidas, uso de cámara (OCR) y micro (Voz).
+- Base de Datos Centralizada: Repositorio único en la nube que gestione la integridad de los datos de ambos entornos.
+
+
+
+
+AA. SISTEMA DE ETIQUETADO FÍSICO (QR/BARRAS)
+- Generación Automática: El sistema debe generar un código QR único para cada ave o pareja.
+- Etiquetas de Jaula: Formato de impresión optimizado para etiquetas pequeñas que incluyan el QR, el número de anilla y la mutación visual.
+- Acceso Directo: Al escanear el QR desde la app móvil, el sistema redirige instantáneamente a la ficha técnica completa del ejemplar, historial de salud o nidada actual.
+
+
+
+
+AB. CODIFICACIÓN VISUAL EN ETIQUETADO (Semaforización)
+- Etiquetas Dinámicas: El sistema permitirá aplicar colores a los bordes o fondos de las etiquetas/QR para identificación rápida a distancia:
+  - Verde: Ave disponible para venta/cesión.
+  - Rojo: Ave reservada o no disponible.
+  - Azul: Ave en tratamiento sanitario (Hospital).
+  - Amarillo: Nidada en curso (Parejas).
+- Actualización en Tiempo Real: Si el estado cambia en la app, al imprimir una nueva etiqueta, el color se actualiza automáticamente según la lógica de negocio.
+
+
+
+
+AC. SOBERANÍA DE DATOS Y COSTE CERO DE MANTENIMIENTO
+- Modelo de Datos: Local-First (Los datos residen físicamente en el dispositivo del usuario).
+- Sincronización: Implementación de sincronización vía WiFi Local o mediante el uso del espacio personal del usuario en nubes gratuitas (Google Drive/OneDrive) como puente, sin requerir servidores propietarios.
+- Independencia Técnica: El sistema debe ser funcional al 100% sin conexión a internet externa.
+- Exportación Blindada: Herramienta nativa para exportar toda la base de datos a archivos universales (Excel/CSV) para garantizar la portabilidad de la información a futuro.
+
+
+
+
+AD. MÓDULO DE ESCAPARATE PÚBLICO (Showcase)
+- Generación de URL Pública: Para aves con 'Disponible_Venta = SÍ', el sistema generará un enlace web accesible desde cualquier navegador externo.
+- Privacidad Selectiva: El usuario definirá qué campos son públicos (ej: fotos, mutación, árbol genealógico) y cuáles permanecen privados (ej: costes, tratamientos médicos, notas personales).
+- QR Híbrido: El código QR impreso detectará si el escaneo proviene de la App del propietario (acceso total) o de una cámara externa (acceso limitado al escaparate público).
+- Infraestructura: Uso de servicios de hosting estático gratuitos para asegurar que compartir fichas no genere costes de servidor al criador.

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proyecto Aviario</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- SQL.js (SQLite) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Global Header -->
+        <header class="app-header">
+            <div class="brand">
+                <span>🐦</span> Aviario
+            </div>
+            <nav class="main-nav">
+                <!-- Navigation injected here or static -->
+                <a href="#/dashboard" class="btn" title="Dashboard">🏠 Inicio</a>
+                <a href="#/birds" class="btn" title="Inventario">🐦 Mis Pájaros</a>
+                <a href="#/breeding" class="btn" title="Cría">🥚 Cría</a>
+                <a href="#/health" class="btn" title="Salud">🏥 Salud</a>
+                <a href="#/contacts" class="btn" title="Agenda">👥 Agenda</a>
+                <a href="#/finance" class="btn" title="Economía">💰 Economía</a>
+                <a href="#/inventory" class="btn" title="Insumos">📦 Almacén</a>
+                <a href="#/calendar" class="btn" title="Calendario">📅 Calendario</a>
+                <a href="#/gallery" class="btn" title="Galería">📸 Galería</a>
+                <a href="#/genetics" class="btn" title="Calculadora Genética">🧬 Genética</a>
+                <a href="#/legal" class="btn" title="Cesión de Animales">📄 Cesión</a>
+                <a href="#/settings" class="btn" title="Configuración">⚙️ Ajustes</a>
+            </nav>
+        </header>
+
+        <!-- Main Viewport -->
+        <main id="main-view" class="main-content">
+            <!-- Dynamic Content Loaded Here -->
+            <div style="text-align: center; margin-top: 3rem; color: var(--text-secondary);">
+                <h2>Cargando Aviario...</h2>
+                <div id="debug-log"
+                    style="font-family: monospace; font-size: 0.8rem; margin-top: 1rem; color: #64748b; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; background: #f1f5f9; padding: 1rem; border-radius: 0.5rem;">
+                    Iniciando...<br>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/app.main.js?t=${new Date().getTime()}"></script>
+</body>
+
+</html>
