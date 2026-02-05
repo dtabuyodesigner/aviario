@@ -12,6 +12,17 @@ DB_PATH = os.path.join(BASE_DIR, 'aviario.db')
 @bp.route("/api/genetics/calculate", methods=["POST"])
 def calculate():
     try:
+        # VERIFICACIÓN DEMO
+        # Simple in-memory counter for this process
+        if not hasattr(calculate, "demo_count"):
+             calculate.demo_count = 0
+        
+        if calculate.demo_count >= 5:
+             # Reset on server restart only, which is fine for demo zip
+             return jsonify({'error': 'Límite DEMO: Máximo 5 cálculos genéticos por sesión.'}), 403
+        
+        calculate.demo_count += 1
+
         data = request.json
         
         male = data.get("male", [])

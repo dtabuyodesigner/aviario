@@ -4,9 +4,15 @@ from flask import Flask, jsonify, request, send_from_directory, send_file
 from genetics_api import bp as genetics_bp
 import datetime
 from datetime import datetime, date, timedelta
+from flask_cors import CORS
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app)
 app.register_blueprint(genetics_bp)
+
+# CONFIGURACIÓN DEMO
+DEMO_MODE = True
+MAX_BIRDS_DEMO = 5
 
 # Configuration
 DB_PATH = os.path.join(os.path.dirname(__file__), 'aviario.db')
@@ -213,9 +219,7 @@ def update_bird(id):
             # --- AUTOMATIZACIÓN 2 ---
             elif new_status != 'Activo':
                 data['disponible_venta'] = 0
-                data['reservado'] = 0
-
-
+                data['reservado'] = 0 
         # --- UPDATE DINÁMICO ---
         columns = ', '.join(f'{key} = ?' for key in data.keys())
         values = list(data.values())
@@ -339,6 +343,14 @@ def get_contacts():
 
 @app.route('/api/contacts', methods=['POST'])
 def add_contact():
+    # VERIFICACIÓN DEMO
+    if DEMO_MODE:
+        conn = get_db_connection()
+        count = conn.execute('SELECT COUNT(*) FROM contactos').fetchone()[0]
+        conn.close()
+        if count >= 5:
+            return jsonify({'error': 'Límite DEMO: Máximo 5 contactos.'}), 403
+
     data = request.json
     conn = get_db_connection()
     try:
@@ -488,6 +500,14 @@ def get_pairs():
 
 @app.route('/api/pairs', methods=['POST'])
 def add_pair():
+    # VERIFICACIÓN DEMO
+    if DEMO_MODE:
+        conn = get_db_connection()
+        count = conn.execute('SELECT COUNT(*) FROM cruces').fetchone()[0]
+        conn.close()
+        if count >= 5:
+            return jsonify({'error': 'Límite DEMO: Máximo 5 parejas.'}), 403
+
     data = request.json
     conn = get_db_connection()
     try:
@@ -618,6 +638,14 @@ def update_clutch(id):
 
 @app.route('/api/clutches', methods=['POST'])
 def add_clutch():
+    # VERIFICACIÓN DEMO
+    if DEMO_MODE:
+        conn = get_db_connection()
+        count = conn.execute('SELECT COUNT(*) FROM nidadas').fetchone()[0]
+        conn.close()
+        if count >= 5:
+            return jsonify({'error': 'Límite DEMO: Máximo 5 nidadas.'}), 403
+
     data = request.json
     conn = get_db_connection()
     try:
@@ -772,6 +800,14 @@ def get_treatments():
 
 @app.route('/api/treatments', methods=['POST'])
 def add_treatment():
+    # VERIFICACIÓN DEMO
+    if DEMO_MODE:
+        conn = get_db_connection()
+        count = conn.execute('SELECT COUNT(*) FROM tratamientos').fetchone()[0]
+        conn.close()
+        if count >= 5:
+            return jsonify({'error': 'Límite DEMO: Máximo 5 tratamientos.'}), 403
+
     data = request.json
     conn = get_db_connection()
     try:
