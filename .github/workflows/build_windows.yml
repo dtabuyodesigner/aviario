@@ -37,6 +37,7 @@ jobs:
           app.py
 
     - name: Create Distribution Package
+      shell: cmd
       run: |
          mkdir Aviario_Release
          mkdir Aviario_Release\database
