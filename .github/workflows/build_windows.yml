@@ -25,6 +25,7 @@ jobs:
     - name: Build Executable
       run: |
         pyinstaller --noconfirm --onefile --windowed --name "Aviario" `
+          --manifest "Aviario.manifest" `
           --add-data "index.html;." `
           --add-data "css;css" `
           --add-data "js;js" `
