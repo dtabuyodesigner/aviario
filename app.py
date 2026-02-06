@@ -5,13 +5,26 @@ from genetics_api import bp as genetics_bp
 import datetime
 from datetime import datetime, date, timedelta
 
-app = Flask(__name__, static_folder='.')
-app.register_blueprint(genetics_bp)
+import sys
 
 # Configuration
-DB_PATH = os.path.join(os.path.dirname(__file__), 'aviario.db')
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'database', 'schema.sql')
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+if getattr(sys, 'frozen', False):
+    # Running as PyInstaller EXE
+    # Helper to find where the EXE is located (for persisting data)
+    BASE_DIR = os.path.dirname(sys.executable)
+    # Helper to find where the internal assets are (temp folder)
+    ASSETS_DIR = sys._MEIPASS
+    
+    app = Flask(__name__, static_folder=ASSETS_DIR)
+else:
+    # Running as normal Python script
+    BASE_DIR = os.path.dirname(__file__)
+    ASSETS_DIR = BASE_DIR
+    app = Flask(__name__, static_folder='.')
+
+DB_PATH = os.path.join(BASE_DIR, 'aviario.db')
+SCHEMA_PATH = os.path.join(ASSETS_DIR, 'database', 'schema.sql')
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Helper to save files

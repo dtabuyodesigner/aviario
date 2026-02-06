@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Aviario Launcher
+
+echo "🐦 Iniciando Proyecto Aviario..."
+
+# 1. Comprobar Python
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Error: Python 3 no está instalado."
+    echo "Por favor, instala Python 3 desde https://width.python.org/downloads/"
+    read -p "Presiona Enter para salir..."
+    exit 1
+fi
+
+# 2. Configurar entorno virtual
+if [ ! -d "venv" ]; then
+    echo "⚙️  Creando entorno virtual..."
+    python3 -m venv venv
+    
+    echo "📦 Instalando dependencias..."
+    source venv/bin/activate
+    pip install -r requirements.txt
+    
+    echo "🗄️  Inicializando base de datos..."
+    python3 init_db.py
+else
+    source venv/bin/activate
+fi
+
+# 3. Iniciar Servidor en segundo plano
+echo "🚀 Arrancando servidor..."
+python3 app.py > app_log.txt 2>&1 &
+SERVER_PID=$!
+
+# Esperar unos segundos a que arranque
+sleep 2
+
+# 4. Abrir navegador
+echo "🌐 Abriendo navegador..."
+if command -v xdg-open &> /dev/null; then
+    xdg-open http://localhost:8080
+elif command -v open &> /dev/null; then
+    open http://localhost:8080
+elif command -v start &> /dev/null; then
+    start http://localhost:8080
+else
+    echo "⚠️  No se pudo abrir el navegador automáticamente."
+    echo "Por favor abre: http://localhost:8080"
+fi
+
+echo "✅ Sistema funcionando en segundo plano (PID: $SERVER_PID)"
+echo "⚠️  Cierra esta ventana para detener el servidor."
+
+wait $SERVER_PID

@@ -8,7 +8,13 @@ CREATE TABLE IF NOT EXISTS configuracion (
     nombre_criador TEXT,
     dni TEXT,
     n_criador_nacional TEXT,
-    direccion TEXT,
+    telefono TEXT,
+    email TEXT,
+    direccion_calle TEXT,
+    direccion_cp TEXT,
+    direccion_poblacion TEXT,
+    direccion_provincia TEXT,
+    direccion TEXT, -- Fallback
     logo_path TEXT
 );
 

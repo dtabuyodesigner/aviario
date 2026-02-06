@@ -127,8 +127,8 @@ export const BirdsView = async () => {
     }
 
     async function openBirdModal(birdId) {
-        const bird = allBirds.find(b => b.id_ave === birdId);
-        if (!bird) return;
+        const bird = birdId ? allBirds.find(b => b.id_ave === birdId) : {};
+        // if (!bird && birdId) return; // Only return if ID provided but not found
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -325,8 +325,12 @@ export const BirdsView = async () => {
             formData.set('reservado', chkReservado.checked ? '1' : '0');
 
             try {
-                const response = await fetch(`/api/birds/${bird.id_ave}`, {
-                    method: 'PUT',
+                // Determine if Create or Update
+                const url = bird.id_ave ? `/api/birds/${bird.id_ave}` : '/api/birds';
+                const method = bird.id_ave ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
                     body: formData
                 });
 
@@ -334,11 +338,12 @@ export const BirdsView = async () => {
                     modal.remove();
                     await fetchBirds();
                 } else {
-                    alert('Error al guardar los cambios');
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'Error al guardar'));
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al guardar los cambios');
+                alert('Error de conexión');
             }
         });
 
@@ -427,8 +432,7 @@ export const BirdsView = async () => {
     });
 
     container.querySelector('#new-bird-btn').addEventListener('click', () => {
-        // TODO: Implement new bird modal
-        alert('Funcionalidad de nuevo pájaro pendiente de implementar');
+        openBirdModal(null); // Pass null for new bird
     });
 
     // Initial load
