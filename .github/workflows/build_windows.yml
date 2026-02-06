@@ -39,8 +39,10 @@ jobs:
     - name: Create Distribution Package
       run: |
          mkdir Aviario_Demo
+         mkdir Aviario_Demo\database
          copy dist\Aviario.exe Aviario_Demo\
          copy demo_test\iniciar_aviario.bat Aviario_Demo\
+         if exist database\aviario.db copy database\aviario.db Aviario_Demo\database\aviario.db
          
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

@@ -22,7 +22,7 @@ else:
     ASSETS_DIR = BASE_DIR
     app = Flask(__name__, static_folder='.')
 
-DB_PATH = os.path.join(BASE_DIR, 'aviario.db')
+DB_PATH = os.path.join(BASE_DIR, 'database', 'aviario.db')
 SCHEMA_PATH = os.path.join(ASSETS_DIR, 'database', 'schema.sql')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

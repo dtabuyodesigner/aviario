@@ -12,6 +12,7 @@ ENV/
 
 # Database
 *.db
+!database/aviario.db
 *.db-journal
 *.sqlite
 *.sqlite3
