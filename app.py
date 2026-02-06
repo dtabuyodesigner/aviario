@@ -112,6 +112,9 @@ def add_bird():
                 cur.execute('INSERT INTO especies (nombre_comun) VALUES (?)', (species_name,))
                 data['id_especie'] = cur.lastrowid
 
+        if 'criador_externo' in data:
+            data['id_criador_externo'] = data.pop('criador_externo')
+
         # 2. Construct SQL dynamically based on remaining keys
         keys = ', '.join(data.keys())
         question_marks = ', '.join(['?'] * len(data))

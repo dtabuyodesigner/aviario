@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS pajaros (
     
     -- Multimedia
     foto_path TEXT,
+
+    -- Datos de Compra (Nuevos)
+    precio_compra REAL DEFAULT 0,
+    fecha_compra DATE,
+    tipo_compra TEXT, -- 'Cesión', 'Compra', 'Regalo'
     
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
     observaciones TEXT,
