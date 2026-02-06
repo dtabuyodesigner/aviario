@@ -46,7 +46,7 @@ def init_db():
     if not os.path.exists(DB_PATH):
         print("Initializing database...")
         conn = get_db_connection()
-        with open(SCHEMA_PATH, 'r') as f:
+        with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
             conn.executescript(f.read())
         conn.close()
         print("Database initialized.")

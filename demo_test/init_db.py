@@ -14,7 +14,7 @@ def init_db():
         print("⚙️  Inicializando base de datos...")
         connection = sqlite3.connect(DB_PATH)
         
-        with open(SCHEMA_PATH) as f:
+        with open(SCHEMA_PATH, encoding='utf-8') as f:
             connection.executescript(f.read())
             
         # Crear tabla de usuarios si no existe (opcional, por si la demo lo requiere)
