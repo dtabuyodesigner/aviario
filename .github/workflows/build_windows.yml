@@ -47,5 +47,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Aviario_Demo_Windows
+        name: Aviario_V1
         path: Aviario_Demo
