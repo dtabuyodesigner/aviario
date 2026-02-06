@@ -16,7 +16,7 @@ if exist "dist\Aviario.exe" (
     REM Esperar un poco a que arranque el servidor interno del exe
     timeout /t 5 /nobreak >nul
     echo [INFO] Abriendo navegador...
-    start http://localhost:5000
+    start http://localhost:8080
     
     goto END
 )
@@ -29,7 +29,7 @@ if exist "Aviario.exe" (
     
     timeout /t 5 /nobreak >nul
     echo [INFO] Abriendo navegador...
-    start http://localhost:5000
+    start http://localhost:8080
     
     goto END
 )
