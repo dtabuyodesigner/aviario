@@ -1,11 +1,27 @@
+import sys
 import os
+
+# --- LOGGING SETUP (AS EARLY AS POSSIBLE) ---
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+import logging
+log_file = os.path.join(BASE_DIR, 'app_error.log')
+logging.basicConfig(
+    filename=log_file,
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    filemode='a' # Append mode
+)
+logging.info("--- APPLICATION STARTUP ---")
+
 import sqlite3
 from flask import Flask, jsonify, request, send_from_directory, send_file
 from genetics_api import bp as genetics_bp
 import datetime
 from datetime import datetime, date, timedelta
-
-import sys
 
 # Configuration
 TRIAL_MODE = True
@@ -13,14 +29,12 @@ TRIAL_MODE = True
 # Configuration
 if getattr(sys, 'frozen', False):
     # Running as PyInstaller EXE
-    BASE_DIR = os.path.dirname(sys.executable)
     ASSETS_DIR = sys._MEIPASS
     app = Flask(__name__, static_folder=ASSETS_DIR)
 else:
     # Running as normal Python script
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    ASSETS_DIR = BASE_DIR
     app = Flask(__name__, static_folder='.')
+    ASSETS_DIR = BASE_DIR
 
 # Ensure database directory exists in BASE_DIR
 DB_FOLDER = os.path.join(BASE_DIR, 'database')

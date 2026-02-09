@@ -42,7 +42,7 @@ jobs:
     - name: Build with PyInstaller (Windows)
       if: runner.os == 'Windows'
       run: |
-        pyinstaller --noconfirm --onefile --windowed `
+        pyinstaller --noconfirm --onefile `
           --name "Aviario_Windows" `
           --add-data "database/schema.sql;database" `
           --add-data "index.html;." `
