@@ -1036,19 +1036,37 @@ def get_incubation_parameters():
     return jsonify([dict(ix) for ix in params])
 
 if __name__ == '__main__':
+    print("========================================")
+    print("   INICIANDO AVIARIO - MODO DEBUG (v1.5)")
+    print("========================================")
+    
     try:
         # Logging errors to a file since it's a windowed app
         import logging
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("Starting Aviario Application...")
+        logging.info("--- STARTUP HEARTBEAT ---")
+        print(f"Directorio Base: {BASE_DIR}")
+        print(f"Directorio Assets: {ASSETS_DIR}")
+        print(f"Iniciando base de datos...")
         
         init_db()
+        
+        print(f"Servidor arrancando en http://localhost:8080")
+        print("MANTENGA ESTA VENTANA ABIERTA PARA QUE EL PROGRAMA FUNCIONE")
+        print("========================================")
+        
         # Using 0.0.0.0 to be more accessible and debug=False for production
         app.run(host='0.0.0.0', debug=False, port=8080)
+        
     except Exception as e:
         import logging
         logging.exception("Failed to start application")
-        # Also try to print if possible
-        print(f"CRITICAL ERROR: {e}")
+        print(f"\nERROR CRÍTICO AL ARRANCAR: {e}")
+        print("\nEl error se ha guardado en 'app_error.log'")
+        input("\nPresione ENTER para cerrar...")
+    finally:
+        print("\nAlicación finalizada.")
+        if getattr(sys, 'frozen', False):
+            input("\nPresione ENTER para salir...")
