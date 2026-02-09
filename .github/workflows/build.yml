@@ -1,0 +1,74 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build with PyInstaller (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        pyinstaller --noconfirm --onefile --windowed \
+          --name "Aviario_Linux" \
+          --add-data "database/schema.sql:database" \
+          --add-data "index.html:." \
+          --add-data "css:css" \
+          --add-data "js:js" \
+          --add-data "uploads:uploads" \
+          app.py
+
+    - name: Build with PyInstaller (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        pyinstaller --noconfirm --onefile --windowed `
+          --name "Aviario_Windows" `
+          --add-data "database/schema.sql;database" `
+          --add-data "index.html;." `
+          --add-data "css;css" `
+          --add-data "js;js" `
+          --add-data "uploads;uploads" `
+          app.py
+
+    - name: Prepare Artifacts (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        mkdir -p dist/database
+        cp database/aviario.db dist/database/ || echo "No aviario.db found, skipping"
+        mkdir -p dist/uploads
+
+    - name: Prepare Artifacts (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        if (Test-Path database/aviario.db) {
+            New-Item -ItemType Directory -Force -Path dist/database
+            Copy-Item database/aviario.db -Destination dist/database/
+        }
+        New-Item -ItemType Directory -Force -Path dist/uploads
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Aviario_${{ matrix.os }}
+        path: dist/

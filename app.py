@@ -8,21 +8,28 @@ from datetime import datetime, date, timedelta
 import sys
 
 # Configuration
+# Configuration
 if getattr(sys, 'frozen', False):
     # Running as PyInstaller EXE
-    # Helper to find where the EXE is located (for persisting data)
     BASE_DIR = os.path.dirname(sys.executable)
-    # Helper to find where the internal assets are (temp folder)
     ASSETS_DIR = sys._MEIPASS
-    
     app = Flask(__name__, static_folder=ASSETS_DIR)
 else:
     # Running as normal Python script
-    BASE_DIR = os.path.dirname(__file__)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     ASSETS_DIR = BASE_DIR
     app = Flask(__name__, static_folder='.')
 
-DB_PATH = os.path.join(BASE_DIR, 'database', 'aviario.db')
+# Ensure database directory exists in BASE_DIR
+DB_FOLDER = os.path.join(BASE_DIR, 'database')
+if not os.path.exists(DB_FOLDER):
+    os.makedirs(DB_FOLDER)
+
+DB_PATH = os.path.join(DB_FOLDER, 'aviario.db')
+print(f"DEBUG: BASE_DIR={BASE_DIR}")
+print(f"DEBUG: ASSETS_DIR={ASSETS_DIR}")
+print(f"DEBUG: DB_PATH={DB_PATH}")
+
 SCHEMA_PATH = os.path.join(ASSETS_DIR, 'database', 'schema.sql')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -54,11 +61,11 @@ def init_db():
 # Routes for Frontend
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(ASSETS_DIR, 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('.', path)
+    return send_from_directory(ASSETS_DIR, path)
 
 @app.route('/uploads/<path:filename>')
 def serve_uploads(filename):
@@ -799,7 +806,7 @@ def add_treatment():
         cur.execute(sql, (
             data.get('id_ave'),
             data.get('id_receta'),
-            data.get('tipo', 'Curativo'),
+            data.get('tipo'),
             data.get('fecha_inicio'),
             data.get('fecha_fin'),
             data.get('sintomas'),
@@ -808,10 +815,10 @@ def add_treatment():
             data.get('estado', 'Activo'),
             data.get('resultado')
         ))
+        row_id = cur.lastrowid
         conn.commit()
-        new_id = cur.lastrowid
         conn.close()
-        return jsonify({'id': new_id}), 201
+        return jsonify({'id': row_id}), 201
     except sqlite3.Error as e:
         conn.close()
         return jsonify({'error': str(e)}), 400
