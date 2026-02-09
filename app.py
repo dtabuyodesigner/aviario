@@ -8,6 +8,8 @@ from datetime import datetime, date, timedelta
 import sys
 
 # Configuration
+TRIAL_MODE = True
+
 # Configuration
 if getattr(sys, 'frozen', False):
     # Running as PyInstaller EXE
@@ -58,6 +60,20 @@ def init_db():
         conn.close()
         print("Database initialized.")
 
+def check_trial_limit(table, limit, condition=""):
+    if not TRIAL_MODE: return True
+    try:
+        conn = get_db_connection()
+        query = f"SELECT count(*) FROM {table}"
+        if condition:
+            query += f" WHERE {condition}"
+        count = conn.execute(query).fetchone()[0]
+        conn.close()
+        return count < limit
+    except Exception as e:
+        print(f"Error checking trial limit: {e}")
+        return True # Fallback to allow in case of error, though maybe we should block?
+
 # Routes for Frontend
 @app.route('/')
 def index():
@@ -94,10 +110,18 @@ def add_bird():
     if file:
         data['foto_path'] = save_file(file)
         
+    # --- TRIAL MODE LIMIT ---
+    if not check_trial_limit("pajaros", 5, "estado = 'Activo'"):
+        return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 5 pájaros activos)'}), 403
+
     conn = get_db_connection()
     try:
         cur = conn.cursor()
 
+        # Bug Fix: Map 'precio' to 'precio_compra'
+        if 'precio' in data:
+            data['precio_compra'] = data.pop('precio')
+        
         # 1. Resolve 'especie' text to 'id_especie'
         # Note: variable name was 'new_bird' in previous context but 'data' here? 
         # Inspecting previous view: Lines 71 uses 'data'. Lines 82 uses 'new_bird'. 
@@ -169,8 +193,27 @@ def update_bird(id):
 
     conn = get_db_connection()
 
+    conn = get_db_connection()
+
     try:
         cur = conn.cursor()
+
+        # Bug Fix: Map 'precio' to 'precio_compra' for the bird record
+        # Note: If it's a sale, it should be popped and used for movement only.
+        # But if it's changing the purchase price after the fact, it's precio_compra.
+        # The frontend seems to send 'precio' for both.
+        if 'precio' in data:
+            # We pop it here to avoid the "no column named precio" error.
+            # We'll handle 'precio_compra' explicitly if needed, or re-add it as precio_compra.
+            val = data.pop('precio')
+            # If not in a sale flow (where we use it for movement), we can update precio_compra
+            if 'estado' not in data or data['estado'] == 'Activo':
+                data['precio_compra'] = val
+            # If it's a sale/cession, 'precio' variable below will still get it from the pop result if we saved it?
+            # Wait, the code below uses data.get('precio', 0). I should fix that too.
+            precio_for_movement = val
+        else:
+            precio_for_movement = 0
 
         # --- Resolver especie ---
         if 'especie' in data:
@@ -220,11 +263,15 @@ def update_bird(id):
                 )
 
                 id_contacto = data.get('id_contacto_salida')
-                precio = data.get('precio', 0)
+                precio = precio_for_movement # Use the popped value
                 notas = data.get(
                     'motivo_salida',
                     f"Cambio de estado a {new_status}"
                 )
+
+                # --- TRIAL MODE LIMIT: MOVEMENTS ---
+                if not check_trial_limit("movimientos", 3):
+                    return jsonify({'error': 'Límite de movimientos (ventas/cesiones) alcanzado en la versión de prueba (Máx 3)'}), 403
 
                 cur.execute("""
                     INSERT INTO movimientos
@@ -289,6 +336,8 @@ def get_bird_gallery(id):
 
 @app.route('/api/birds/<int:id>/gallery', methods=['POST'])
 def add_bird_photo(id):
+    if TRIAL_MODE:
+        return jsonify({'error': 'La galería está desactivada en la versión de prueba'}), 403
     file = request.files.get('foto')
     if not file:
         return jsonify({'error': 'No file provided'}), 400
@@ -362,6 +411,8 @@ def get_contacts():
 
 @app.route('/api/contacts', methods=['POST'])
 def add_contact():
+    if not check_trial_limit("contactos", 3):
+        return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 3 contactos)'}), 403
     data = request.json
     conn = get_db_connection()
     try:
@@ -641,6 +692,8 @@ def update_clutch(id):
 
 @app.route('/api/clutches', methods=['POST'])
 def add_clutch():
+    if not check_trial_limit("nidadas", 2):
+        return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 2 nidadas)'}), 403
     data = request.json
     conn = get_db_connection()
     try:
@@ -684,6 +737,8 @@ def get_bird_history(id):
 
 @app.route('/api/breeding', methods=['GET'])
 def get_breeding_events():
+    if TRIAL_MODE:
+        return jsonify([]), 200 # Blank calendar in trial mode
     conn = get_db_connection()
     # Fetch all clutches that have a start date
     # Mapped 'fecha_primer_huevo' -> 'fecha_inicio' for frontend compatibility
@@ -707,6 +762,12 @@ def get_breeding_events():
 
 # Health Routes
 # 1. RECIPES (Botiquín)
+@app.route('/api/recipes', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/api/recipes/<int:id>', methods=['PUT', 'DELETE'])
+def recipes_block(id=None):
+    if TRIAL_MODE:
+        return jsonify({'error': 'El módulo de Salud está desactivado en la versión de prueba'}), 403
+
 @app.route('/api/recipes', methods=['GET'])
 def get_recipes():
     conn = get_db_connection()
@@ -772,6 +833,12 @@ def delete_recipe(id):
         return jsonify({'error': str(e)}), 400
 
 # 2. TREATMENTS (Hospital / Historial)
+@app.route('/api/treatments', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/api/treatments/<int:id>', methods=['PUT', 'DELETE'])
+def treatments_block(id=None):
+    if TRIAL_MODE:
+        return jsonify({'error': 'El módulo de Salud está desactivado en la versión de prueba'}), 403
+
 @app.route('/api/treatments', methods=['GET'])
 def get_treatments():
     active_only = request.args.get('active', 'false').lower() == 'true'
@@ -921,6 +988,8 @@ def save_config():
 
 @app.route('/api/backup', methods=['GET'])
 def download_backup():
+    if TRIAL_MODE:
+        return jsonify({'error': 'Las copias de seguridad están desactivadas en la versión de prueba'}), 403
     try:
         return send_file(DB_PATH, as_attachment=True, download_name=f'aviario_backup_{datetime.datetime.now().strftime("%Y%m%d")}.db')
     except Exception as e:
@@ -928,6 +997,8 @@ def download_backup():
 
 @app.route('/api/restore', methods=['POST'])
 def restore_backup():
+    if TRIAL_MODE:
+        return jsonify({'error': 'La restauración está desactivada en la versión de prueba'}), 403
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']

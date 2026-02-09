@@ -9,8 +9,16 @@ bp = Blueprint("genetics", __name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'aviario.db')
 
+# Trial Limit
+CALC_COUNT = 0
+MAX_CALCS = 3
+
 @bp.route("/api/genetics/calculate", methods=["POST"])
 def calculate():
+    global CALC_COUNT
+    if CALC_COUNT >= MAX_CALCS:
+        return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 3 cálculos genéticos)'}), 403
+    
     try:
         data = request.json
         
@@ -20,6 +28,9 @@ def calculate():
         
         if not species:
             return jsonify({'error': 'Species is required'}), 400
+
+        # Increment count
+        CALC_COUNT += 1
 
         # Load Loci definitions from DB
         loci = load_loci_from_db(DB_PATH, species)
