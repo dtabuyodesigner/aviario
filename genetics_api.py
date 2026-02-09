@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Blueprint, request, jsonify
 from genetics_engine import calculate_genetics
 from genetics_db import load_loci_from_db
