@@ -1048,6 +1048,33 @@ def save_config():
         # Check if config exists
         exists = conn.execute('SELECT 1 FROM configuracion LIMIT 1').fetchone()
         if exists:
+            conn.execute('''
+                UPDATE configuracion SET 
+                    nombre_criador=?, dni=?, n_criador_nacional=?, direccion=?, logo_path=?, telefono=?, email=?,
+                    direccion_calle=?, direccion_poblacion=?, direccion_provincia=?, direccion_cp=?
+                WHERE id_config=(SELECT id_config FROM configuracion LIMIT 1)
+            ''', (
+                data.get('nombre_criador'),
+                data.get('dni'),
+                data.get('n_criador_nacional'),
+                data.get('direccion'),
+                data.get('logo_path'),
+                data.get('telefono'),
+                data.get('email'),
+                data.get('direccion_calle'),
+                data.get('direccion_poblacion'),
+                data.get('direccion_provincia'),
+                data.get('direccion_cp')
+            ))
+        else:
+            conn.execute('''
+                INSERT INTO configuracion (nombre_criador, dni, n_criador_nacional, direccion, logo_path, telefono, email, direccion_calle, direccion_poblacion, direccion_provincia, direccion_cp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data.get('nombre_criador'),
+                data.get('dni'),
+                data.get('n_criador_nacional'),
+                data.get('direccion'),
                 data.get('logo_path'),
                 data.get('telefono'),
                 data.get('email'),
@@ -1110,7 +1137,7 @@ def open_browser():
 
 if __name__ == '__main__':
     print("========================================")
-    print("   INICIANDO AVIARIO - ESTABLE (v2.0)")
+    print("   INICIANDO AVIARIO - ESTABLE (v2.1)")
     print("========================================")
     
     try:
@@ -1119,7 +1146,7 @@ if __name__ == '__main__':
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("--- STARTUP HEARTBEAT v2.0 ---")
+        logging.info("--- STARTUP HEARTBEAT v2.1 ---")
         print(f"Directorio Base: {BASE_DIR}")
         print(f"Directorio Assets: {ASSETS_DIR}")
         print(f"Iniciando base de datos...")
