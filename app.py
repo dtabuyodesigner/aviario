@@ -107,6 +107,11 @@ def serve_static(path):
     logging.debug(f"Solicitud de archivo estático: {path}")
     return send_from_directory(ASSETS_DIR, path)
 
+@app.route('/api/ping')
+def ping():
+    logging.info("Heartbeat/Ping recibido")
+    return jsonify({'status': 'ok', 'message': 'Servidor funcionando correctamente'})
+
 @app.route('/uploads/<path:filename>')
 def serve_uploads(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
@@ -1047,7 +1052,7 @@ def get_incubation_parameters():
 
 if __name__ == '__main__':
     print("========================================")
-    print("   INICIANDO AVIARIO - MODO DEBUG (v1.6)")
+    print("   INICIANDO AVIARIO - MODO DEBUG (v1.7)")
     print("========================================")
     
     try:
@@ -1056,19 +1061,20 @@ if __name__ == '__main__':
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("--- STARTUP HEARTBEAT v1.6 ---")
+        logging.info("--- STARTUP HEARTBEAT v1.7 ---")
         print(f"Directorio Base: {BASE_DIR}")
         print(f"Directorio Assets: {ASSETS_DIR}")
         print(f"Iniciando base de datos...")
         
         init_db()
         
-        print(f"Servidor arrancando en http://127.0.0.1:8080")
+        print(f"Servidor arrancando en el puerto 8081")
+        print(f"Pruebe en el navegador: http://localhost:8081")
         print("MANTENGA ESTA VENTANA ABIERTA PARA QUE EL PROGRAMA FUNCIONE")
         print("========================================")
         
-        # Using 127.0.0.1 for local Windows compatibility
-        app.run(host='127.0.0.1', debug=False, port=8080)
+        # Use 8081 in case 8080 is ghosted, and 0.0.0.0 for broader reach
+        app.run(host='0.0.0.0', debug=False, port=8081, threaded=True)
         
     except Exception as e:
         import logging
