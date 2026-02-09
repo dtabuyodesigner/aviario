@@ -66,13 +66,48 @@ def get_db_connection():
     return conn
 
 def init_db():
+    conn = get_db_connection()
     if not os.path.exists(DB_PATH):
         print("Initializing database...")
-        conn = get_db_connection()
         with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
             conn.executescript(f.read())
-        conn.close()
         print("Database initialized.")
+    else:
+        # AUTOMATIC MIGRATIONS
+        print("Checking for migrations...")
+        cur = conn.cursor()
+        
+        # 1. Add 'reservado' to 'pajaros' if missing
+        try:
+            cur.execute("SELECT reservado FROM pajaros LIMIT 1")
+        except sqlite3.OperationalError:
+            print("Migration: Adding 'reservado' to 'pajaros'")
+            cur.execute("ALTER TABLE pajaros ADD COLUMN reservado BOOLEAN DEFAULT 0")
+            conn.commit()
+            
+        # 2. Add 'es_propio' to 'especies' if missing (Common in recent updates)
+        try:
+            cur.execute("SELECT es_propio FROM especies LIMIT 1")
+        except sqlite3.OperationalError:
+            print("Migration: Adding 'es_propio' to 'especies'")
+            cur.execute("ALTER TABLE especies ADD COLUMN es_propio BOOLEAN DEFAULT 0")
+            conn.commit()
+
+        # 3. Ensure 'configuracion' has all fields
+        config_cols = [
+            ('telefono', 'TEXT'), ('email', 'TEXT'), ('direccion_calle', 'TEXT'),
+            ('direccion_cp', 'TEXT'), ('direccion_poblacion', 'TEXT'),
+            ('direccion_provincia', 'TEXT'), ('direccion', 'TEXT'), ('logo_path', 'TEXT')
+        ]
+        for col_name, col_type in config_cols:
+            try:
+                cur.execute(f"SELECT {col_name} FROM configuracion LIMIT 1")
+            except sqlite3.OperationalError:
+                print(f"Migration: Adding '{col_name}' to 'configuracion'")
+                cur.execute(f"ALTER TABLE configuracion ADD COLUMN {col_name} {col_type}")
+                conn.commit()
+
+    conn.close()
 
 def check_trial_limit(table, limit, condition=""):
     if not TRIAL_MODE: return True
@@ -1008,11 +1043,29 @@ def save_config():
                 data.get('direccion_provincia'),
                 data.get('direccion_cp')
             ))
+        else:
+            conn.execute('''
+                INSERT INTO configuracion (nombre_criador, dni, n_criador_nacional, direccion, logo_path, telefono, email, direccion_calle, direccion_poblacion, direccion_provincia, direccion_cp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data.get('nombre_criador'),
+                data.get('dni'),
+                data.get('n_criador_nacional'),
+                data.get('direccion'),
+                data.get('logo_path'),
+                data.get('telefono'),
+                data.get('email'),
+                data.get('direccion_calle'),
+                data.get('direccion_poblacion'),
+                data.get('direccion_provincia'),
+                data.get('direccion_cp')
+            ))
         conn.commit()
         conn.close()
         return jsonify({'message': 'Configuration saved'}), 200
     except sqlite3.Error as e:
         conn.close()
+        print(f"Error saving config: {e}") # Log to console
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/backup', methods=['GET'])
@@ -1052,7 +1105,7 @@ def get_incubation_parameters():
 
 if __name__ == '__main__':
     print("========================================")
-    print("   INICIANDO AVIARIO - MODO DEBUG (v1.7)")
+    print("   INICIANDO AVIARIO - MODO DEBUG (v1.8)")
     print("========================================")
     
     try:
@@ -1061,7 +1114,7 @@ if __name__ == '__main__':
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("--- STARTUP HEARTBEAT v1.7 ---")
+        logging.info("--- STARTUP HEARTBEAT v1.8 ---")
         print(f"Directorio Base: {BASE_DIR}")
         print(f"Directorio Assets: {ASSETS_DIR}")
         print(f"Iniciando base de datos...")

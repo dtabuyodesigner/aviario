@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS pajaros (
     estado TEXT DEFAULT 'Activo' CHECK(estado IN ('Activo', 'Baja', 'Vendido', 'Cedido')),
     id_ubicacion INTEGER,
     disponible_venta BOOLEAN DEFAULT 0,
+    reservado BOOLEAN DEFAULT 0,
     
     -- Campos Legales (Psitácidas Grandes)
     cites_numero TEXT,
