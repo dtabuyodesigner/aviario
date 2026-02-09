@@ -6,8 +6,12 @@ from genetics_db import load_loci_from_db
 bp = Blueprint("genetics", __name__)
 
 # Use absolute path to ensure DB is found
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'aviario.db')
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.path.join(BASE_DIR, 'database', 'aviario.db')
 
 # Trial Limit
 CALC_COUNT = 0
