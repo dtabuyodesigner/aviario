@@ -65,6 +65,28 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def filter_data_for_table(table_name, data):
+    """Filters dictionary data to only include columns that exist in the target SQLite table."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"PRAGMA table_info({table_name})")
+        columns = [row['name'] for row in cur.fetchall()]
+        conn.close()
+        
+        # Filter data
+        filtered = {k: v for k, v in data.items() if k in columns}
+        
+        # Log if we ignored something (useful for debug)
+        ignored = [k for k in data.keys() if k not in columns]
+        if ignored:
+            logging.debug(f"Filtrado v2.0: Ignoradas columnas en {table_name}: {ignored}")
+            
+        return filtered
+    except Exception as e:
+        logging.error(f"Error filtrando columnas para {table_name}: {e}")
+        return data # Fallback to original
+
 def init_db():
     conn = get_db_connection()
     if not os.path.exists(DB_PATH):
@@ -73,19 +95,29 @@ def init_db():
             conn.executescript(f.read())
         print("Database initialized.")
     else:
-        # AUTOMATIC MIGRATIONS
-        print("Checking for migrations...")
+        # AUTOMATIC MIGRATIONS v2.0
+        print("Checking for migrations (v2.0)...")
         cur = conn.cursor()
         
-        # 1. Add 'reservado' to 'pajaros' if missing
-        try:
-            cur.execute("SELECT reservado FROM pajaros LIMIT 1")
-        except sqlite3.OperationalError:
-            print("Migration: Adding 'reservado' to 'pajaros'")
-            cur.execute("ALTER TABLE pajaros ADD COLUMN reservado BOOLEAN DEFAULT 0")
-            conn.commit()
+        # 1. Add missing columns to 'pajaros'
+        pajaros_cols = [
+            ('reservado', 'BOOLEAN DEFAULT 0'),
+            ('id_criador_externo', 'INTEGER'),
+            ('precio_compra', 'REAL DEFAULT 0'),
+            ('fecha_compra', 'DATE'),
+            ('tipo_compra', 'TEXT'),
+            ('cites_numero', 'TEXT'),
+            ('documento_cesion', 'TEXT')
+        ]
+        for col, col_type in pajaros_cols:
+            try:
+                cur.execute(f"SELECT {col} FROM pajaros LIMIT 1")
+            except sqlite3.OperationalError:
+                print(f"Migration: Adding '{col}' to 'pajaros'")
+                cur.execute(f"ALTER TABLE pajaros ADD COLUMN {col} {col_type}")
+                conn.commit()
             
-        # 2. Add 'es_propio' to 'especies' if missing (Common in recent updates)
+        # 2. Add 'es_propio' to 'especies'
         try:
             cur.execute("SELECT es_propio FROM especies LIMIT 1")
         except sqlite3.OperationalError:
@@ -97,7 +129,8 @@ def init_db():
         config_cols = [
             ('telefono', 'TEXT'), ('email', 'TEXT'), ('direccion_calle', 'TEXT'),
             ('direccion_cp', 'TEXT'), ('direccion_poblacion', 'TEXT'),
-            ('direccion_provincia', 'TEXT'), ('direccion', 'TEXT'), ('logo_path', 'TEXT')
+            ('direccion_provincia', 'TEXT'), ('direccion', 'TEXT'), ('logo_path', 'TEXT'),
+            ('dni', 'TEXT'), ('n_criador_nacional', 'TEXT')
         ]
         for col_name, col_type in config_cols:
             try:
@@ -210,6 +243,9 @@ def add_bird():
         if 'criador_externo' in data:
             data['id_criador_externo'] = data.pop('criador_externo')
 
+        # --- v2.0 Robust Filtering ---
+        data = filter_data_for_table("pajaros", data)
+
         # 2. Construct SQL dynamically based on remaining keys
         keys = ', '.join(data.keys())
         question_marks = ', '.join(['?'] * len(data))
@@ -273,11 +309,11 @@ def update_bird(id):
             # If not in a sale flow (where we use it for movement), we can update precio_compra
             if 'estado' not in data or data['estado'] == 'Activo':
                 data['precio_compra'] = val
-            # If it's a sale/cession, 'precio' variable below will still get it from the pop result if we saved it?
-            # Wait, the code below uses data.get('precio', 0). I should fix that too.
+            # If it's a sale/cession, 'precio_for_movement' variable above will still get it from the pop result if we saved it?
             precio_for_movement = val
-        else:
-            precio_for_movement = 0
+        
+        # --- v2.0 Robust Filtering ---
+        data = filter_data_for_table("pajaros", data)
 
         # --- Resolver especie ---
         if 'especie' in data:
@@ -1003,55 +1039,15 @@ def get_config():
 @app.route('/api/config', methods=['POST'])
 def save_config():
     data = request.json
+    
+    # --- v2.0 Robust Filtering ---
+    data = filter_data_for_table("configuracion", data)
+    
     conn = get_db_connection()
     try:
         # Check if config exists
         exists = conn.execute('SELECT 1 FROM configuracion LIMIT 1').fetchone()
         if exists:
-            conn.execute('''
-                UPDATE configuracion SET 
-                    nombre_criador=?, dni=?, n_criador_nacional=?, direccion=?, logo_path=?, telefono=?, email=?,
-                    direccion_calle=?, direccion_poblacion=?, direccion_provincia=?, direccion_cp=?
-                WHERE id_config=(SELECT id_config FROM configuracion LIMIT 1)
-            ''', (
-                data.get('nombre_criador'),
-                data.get('dni'),
-                data.get('n_criador_nacional'),
-                data.get('direccion'),
-                data.get('logo_path'),
-                data.get('telefono'),
-                data.get('email'),
-                data.get('direccion_calle'),
-                data.get('direccion_poblacion'),
-                data.get('direccion_provincia'),
-                data.get('direccion_cp')
-            ))
-        else:
-            conn.execute('''
-                INSERT INTO configuracion (nombre_criador, dni, n_criador_nacional, direccion, logo_path, telefono, email, direccion_calle, direccion_poblacion, direccion_provincia, direccion_cp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                data.get('nombre_criador'),
-                data.get('dni'),
-                data.get('n_criador_nacional'),
-                data.get('direccion'),
-                data.get('logo_path'),
-                data.get('telefono'),
-                data.get('email'),
-                data.get('direccion_calle'),
-                data.get('direccion_poblacion'),
-                data.get('direccion_provincia'),
-                data.get('direccion_cp')
-            ))
-        else:
-            conn.execute('''
-                INSERT INTO configuracion (nombre_criador, dni, n_criador_nacional, direccion, logo_path, telefono, email, direccion_calle, direccion_poblacion, direccion_provincia, direccion_cp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                data.get('nombre_criador'),
-                data.get('dni'),
-                data.get('n_criador_nacional'),
-                data.get('direccion'),
                 data.get('logo_path'),
                 data.get('telefono'),
                 data.get('email'),
@@ -1114,7 +1110,7 @@ def open_browser():
 
 if __name__ == '__main__':
     print("========================================")
-    print("   INICIANDO AVIARIO - MODO DEBUG (v1.9)")
+    print("   INICIANDO AVIARIO - ESTABLE (v2.0)")
     print("========================================")
     
     try:
@@ -1123,7 +1119,7 @@ if __name__ == '__main__':
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("--- STARTUP HEARTBEAT v1.9 ---")
+        logging.info("--- STARTUP HEARTBEAT v2.0 ---")
         print(f"Directorio Base: {BASE_DIR}")
         print(f"Directorio Assets: {ASSETS_DIR}")
         print(f"Iniciando base de datos...")
