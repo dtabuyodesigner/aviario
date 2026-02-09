@@ -91,10 +91,20 @@ def check_trial_limit(table, limit, condition=""):
 # Routes for Frontend
 @app.route('/')
 def index():
-    return send_from_directory(ASSETS_DIR, 'index.html')
+    logging.info("Solicitud recibida en /")
+    try:
+        path = os.path.join(ASSETS_DIR, 'index.html')
+        if not os.path.exists(path):
+            logging.error(f"No se encuentra index.html en: {ASSETS_DIR}")
+            return f"Error: index.html no encontrado en {ASSETS_DIR}", 404
+        return send_from_directory(ASSETS_DIR, 'index.html')
+    except Exception as e:
+        logging.exception("Error al servir index.html")
+        return str(e), 500
 
 @app.route('/<path:path>')
 def serve_static(path):
+    logging.debug(f"Solicitud de archivo estático: {path}")
     return send_from_directory(ASSETS_DIR, path)
 
 @app.route('/uploads/<path:filename>')
@@ -1037,7 +1047,7 @@ def get_incubation_parameters():
 
 if __name__ == '__main__':
     print("========================================")
-    print("   INICIANDO AVIARIO - MODO DEBUG (v1.5)")
+    print("   INICIANDO AVIARIO - MODO DEBUG (v1.6)")
     print("========================================")
     
     try:
@@ -1046,19 +1056,19 @@ if __name__ == '__main__':
         log_file = os.path.join(BASE_DIR, 'app_error.log')
         logging.basicConfig(filename=log_file, level=logging.DEBUG, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("--- STARTUP HEARTBEAT ---")
+        logging.info("--- STARTUP HEARTBEAT v1.6 ---")
         print(f"Directorio Base: {BASE_DIR}")
         print(f"Directorio Assets: {ASSETS_DIR}")
         print(f"Iniciando base de datos...")
         
         init_db()
         
-        print(f"Servidor arrancando en http://localhost:8080")
+        print(f"Servidor arrancando en http://127.0.0.1:8080")
         print("MANTENGA ESTA VENTANA ABIERTA PARA QUE EL PROGRAMA FUNCIONE")
         print("========================================")
         
-        # Using 0.0.0.0 to be more accessible and debug=False for production
-        app.run(host='0.0.0.0', debug=False, port=8080)
+        # Using 127.0.0.1 for local Windows compatibility
+        app.run(host='127.0.0.1', debug=False, port=8080)
         
     except Exception as e:
         import logging
