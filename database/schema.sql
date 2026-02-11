@@ -24,7 +24,14 @@ CREATE TABLE IF NOT EXISTS especies (
     nombre_cientifico TEXT,
     dias_incubacion INTEGER DEFAULT 21,
     dias_anillado INTEGER DEFAULT 8,
-    grupo_genetico TEXT -- 'Psitácida', 'Canario', 'Exótico', etc.
+    grupo_genetico TEXT, -- 'Psitácida', 'Canario', 'Exótico', etc.
+    categoria TEXT,
+    continente TEXT,
+    uuid TEXT,
+    dimorfismo_sexual TEXT,
+    tamano_puesta TEXT,
+    notas TEXT,
+    tiene_mutaciones BOOLEAN DEFAULT 0
 );
 
 -- Tabla Maestra de Mutaciones y Variedades
@@ -68,6 +75,7 @@ CREATE TABLE IF NOT EXISTS pajaros (
     id_especie INTEGER,
     mutacion_visual TEXT,
     portador_de TEXT,
+    id_raza TEXT,
     sexo TEXT CHECK(sexo IN ('M', 'H', '?')),
     fecha_nacimiento DATE,
     anio_nacimiento INTEGER,
@@ -96,6 +104,13 @@ CREATE TABLE IF NOT EXISTS pajaros (
     fecha_compra DATE,
     tipo_compra TEXT, -- 'Cesión', 'Compra', 'Regalo'
     
+    -- SaaS y v2
+    uuid TEXT,
+    owner_id TEXT,
+    created_at TEXT DEFAULT (DATETIME('now')),
+    updated_at TEXT DEFAULT (DATETIME('now')),
+    deleted_at TEXT,
+
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
     observaciones TEXT,
 
@@ -187,4 +202,42 @@ CREATE TABLE IF NOT EXISTS tratamientos (
     
     FOREIGN KEY(id_ave) REFERENCES pajaros(id_ave),
     FOREIGN KEY(id_receta) REFERENCES recetas(id_receta)
+);
+
+-- 10. DETALLE DE MUTACIONES POR PÁJARO (v2 - Motor Avanzado)
+CREATE TABLE IF NOT EXISTS bird_mutations (
+    id TEXT PRIMARY KEY,
+    id_ave INTEGER NOT NULL,
+    id_mutacion INTEGER NOT NULL,
+
+    expresion TEXT CHECK(expresion IN ('Fenotipica','Genotipica')),
+    genotipo TEXT CHECK(genotipo IN ('Homocigoto','Heterocigoto','Portador','Desconocido')),
+
+    created_at TEXT DEFAULT (DATETIME('now')),
+    updated_at TEXT DEFAULT (DATETIME('now')),
+    deleted_at TEXT,
+
+    FOREIGN KEY(id_ave) REFERENCES pajaros(id_ave),
+    FOREIGN KEY(id_mutacion) REFERENCES mutaciones(id_mutacion)
+);
+
+-- 11. RAZA DE CANARIOS (v2)
+CREATE TABLE IF NOT EXISTS canary_breeds (
+    id TEXT PRIMARY KEY,
+    id_especie INTEGER,
+    nombre_raza TEXT,
+    tipo TEXT,
+    descripcion TEXT,
+    FOREIGN KEY(id_especie) REFERENCES especies(id_especie)
+);
+
+-- 12. USUARIOS (SaaS preparation)
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    nombre TEXT,
+    email TEXT,
+    password_hash TEXT,
+    created_at TEXT,
+    updated_at TEXT,
+    deleted_at TEXT
 );

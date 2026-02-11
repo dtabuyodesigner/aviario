@@ -1,10 +1,5 @@
 from itertools import product
 from collections import defaultdict
-
-# =====================================================
-# 1. CORE LOGIC (No DB, No Flask)
-# =====================================================
-
 import logging
 
 # Config logging to file
@@ -38,12 +33,10 @@ def build_parent_genotype(selected_mutations, loci, sex):
             name = raw_name.lower()
             factor = m.get("factor")
 
-            # Buscar coincidencia flexible
+            # Buscar coincidencia exacta (o disciplinada)
             for allele_name in locus.alleles:
-
                 a = allele_name.lower()
-
-                if a in name or name in a:
+                if a == name: # Changed from 'in' to '==' for precision
                     if allele_name != "wild":
                         allele = allele_name
                         break
@@ -55,21 +48,16 @@ def build_parent_genotype(selected_mutations, loci, sex):
 
         if locus.sex_linked and sex == "H":
             genotype[locus_name] = (allele, "W") if allele != "wild" else ("wild", "W")
-
         else:
-
             wild_dom = locus.alleles.get("wild", 0)
             mut_dom = locus.alleles.get(allele, 0)
 
             if allele == "wild":
                 genotype[locus_name] = ("wild", "wild")
-
             elif factor == "Portador":
                 genotype[locus_name] = (allele, "wild")
-
             elif factor == "DF":
                 genotype[locus_name] = (allele, allele)
-
             else:
                 # Visual automático según dominancia
                 if mut_dom > wild_dom:
@@ -110,14 +98,6 @@ def crossover_locus(locus, male_alleles, female_alleles):
 # =====================================================
 
 def resolve_phenotype(locus, alleles):
-    # Determine dominant allele
-    # This assumes 'alleles' contains names like ("Turquesa", "wild") or ("Turquesa", "Turquesa")
-    
-    # Sex linked 'W' handling
-    # If W is present, the other allele determines phenotype (hemizygous)
-    # But effectively, if we have (Mut, W), Mut is expressed. 
-    # If (wild, W), Wild is expressed.
-    
     # Filter W for dominance check
     check_alleles = [a for a in alleles if a != "W"]
     
@@ -127,10 +107,6 @@ def resolve_phenotype(locus, alleles):
     
     # Find most dominant allele
     for a in check_alleles:
-        # Default dominance if not in map?
-        # User defined logic: Wild=2, Rec=0.
-        # But we must be careful. 
-        # If we rely on locus.alleles having 'wild':2...
         val = dom.get(a, 0)
         if val > best_dom:
             best = a
@@ -138,47 +114,29 @@ def resolve_phenotype(locus, alleles):
             
     # If best is wild, we might be Split (Portador)
     if best == "wild":
-        # Check carriers
         carriers = [a for a in check_alleles if a != "wild"]
         if carriers:
-             # E.g. "Portador de Aqua"
-             # Join if multiple? (Unlikely for one locus but good practice)
              carrier_str = " + ".join([f"Portador de {c}" for c in set(carriers)])
              return "Ancestral", carrier_str
 
         return "Ancestral", "Ancestral"
 
     # If Visual (best != wild)
-    # Consult genotype string
     geno_list = []
-    # Count alleles including W?
-    # For (Mut, W), we say "Mut".
-    # For (Mut, Mut), we say "Mut (DF)"
-    # For (Mut, Wild) and Mut is Dominant -> "Mut (SF)"
-    
-    # Re-eval counts from full alleles tuple
-    normalized = [a for a in alleles if a != "W"] # W doesn't count for DF/SF usually
-    
+    normalized = [a for a in alleles if a != "W"]
     counts = {x: normalized.count(x) for x in normalized}
     
     for a, ct in counts.items():
         if a == "wild": continue
-        
-        # Determine label
-        # If Sex Linked and Female (W present in original 'alleles') -> Just Name (Hembra)
         if "W" in alleles:
             geno_list.append(f"{a}")
         else:
-            # Autosomal or Male SL
             if ct == 2:
                 geno_list.append(f"{a} (DF)")
             else:
-                # Single Factor
                 geno_list.append(f"{a} (SF)")
     
-    geno = " + ".join(geno_list) or best # Fallback to name if list empty?
-    
-    # Aesthetic Fix: Ensure standard notation
+    geno = " + ".join(geno_list) or best
     geno = geno.replace("/ ", "Portador de ").replace("/", "Portador de ")
     
     return best, geno
@@ -213,117 +171,98 @@ def combine_results(locus_results):
                 elif c2["sex"] != "Any":
                     sex = c2["sex"]
 
-                pheno = " + ".join(
-                    p for p in [c1["phenotype"], c2["phenotype"]] if p != "Ancestral"
-                ) or "Ancestral"
+                pheno_parts = [p for p in [c1["phenotype"], c2["phenotype"]] if p != "Ancestral"]
+                pheno = " + ".join(pheno_parts) or "Ancestral"
 
                 geno_parts = [g for g in [c1["genotype"], c2["genotype"]] if g != "Ancestral"]
-                
                 if geno_parts:
                     geno = " + ".join(geno_parts)
-                    # Cleanup weird slashes just in case
-                    geno = " + ".join(geno_parts)
-                    # Cleanup weird slashes just in case - Aggressive
                     geno = geno.replace("/", "Portador de ")
-                    geno = geno.replace("Portador de  ", "Portador de ") # Clean double spaces
+                    geno = geno.replace("Portador de  ", "Portador de ")
                 else:
                     geno = "Ancestral"
 
                 new_combined.append({
                     "sex": sex,
                     "phenotype": pheno,
-                    "genotype": geno
+                    "genotype": geno,
+                    "pheno_list": pheno_parts
                 })
 
         combined = new_combined
 
     return combined
 
+def apply_combinations(result, combinations):
+    if not combinations: return result
+    phenos = result.get("pheno_list", [])
+    if len(phenos) < 2: return result
+    
+    for i in range(len(phenos)):
+        for j in range(i + 1, len(phenos)):
+            pair = tuple(sorted([phenos[i].lower(), phenos[j].lower()]))
+            if pair in combinations:
+                result["phenotype"] = combinations[pair]
+                return result
+    return result
+
 
 # =====================================================
 # FUNCIÓN PRINCIPAL
 # =====================================================
 
-def calculate_genetics(male_mutations, female_mutations, loci):
+def calculate_genetics(male_mutations, female_mutations, loci, combinations=None):
 
     logging.info(f"INPUT Male: {male_mutations}")
     logging.info(f"INPUT Female: {female_mutations}")
-    logging.info(f"LOCI AVAILABLE: {list(loci.keys())}")
     
     male_gen = build_parent_genotype(male_mutations, loci, "M")
     female_gen = build_parent_genotype(female_mutations, loci, "H")
     
-    logging.info(f"GENOTIPO MACHO: {male_gen}")
-    logging.info(f"GENOTIPO HEMBRA: {female_gen}")
-    # Also print to stdout just in case
-    print("GENOTIPO MACHO:", male_gen)
-    print("GENOTIPO HEMBRA:", female_gen)
+    # print("GENOTIPO MACHO:", male_gen)
+    # print("GENOTIPO HEMBRA:", female_gen)
 
-    # Filter active loci (mutated in at least one parent)
     active_loci_names = []
     for lname in loci:
         m_a = male_gen[lname]
         f_a = female_gen[lname]
-        
-        # Check if Wild
-        # Male Wild: ('wild', 'wild')
-        # Female Wild: ('wild', 'wild') or ('wild', 'W')
-        
         is_m_wild = (m_a == ('wild', 'wild'))
         is_f_wild = (f_a == ('wild', 'wild') or f_a == ('wild', 'W'))
         
         if not is_m_wild or not is_f_wild:
             active_loci_names.append(lname)
-            
-    logging.info(f"ACTIVE LOCI: {active_loci_names}")
 
     locus_results = []
-    
-    # If no active loci, return wildtype immediately
-    if not active_loci_names:
-         # Need to handle sex dist?
-         # Just return basic Ancestral
-         pass # let the logic flow, but active_loci is empty.
-
     for locus_name in active_loci_names:
         locus = loci[locus_name] 
-
-        crosses = crossover_locus(
-            locus,
-            male_gen[locus_name],
-            female_gen[locus_name]
-        )
-
+        crosses = crossover_locus(locus, male_gen[locus_name], female_gen[locus_name])
         analyzed = []
-
         for child in crosses:
             pheno, geno = resolve_phenotype(locus, child["alleles"])
-            logging.info(f"RESOLVE LOCUS {locus_name} ALLELES {child['alleles']} -> PHENO: {pheno}")
-            
             analyzed.append({
                 "sex": child["sex"],
-                
                 "phenotype": pheno,
                 "genotype": geno
             })
-            
         locus_results.append(analyzed)
 
     combined = combine_results(locus_results)
     
-    # If no results (e.g. all wild), add default Ancestral
     if not combined:
-        logging.info("No active loci, returning Ancestral default.")
         combined = [{'sex': 'Any', 'phenotype': 'Ancestral', 'genotype': 'Ancestral'}]
 
-    if combined:
-        logging.info(f"DEBUG COMBINED SAMPLE: {combined[0]}")
+    if combinations:
+        combined = [apply_combinations(c, combinations) for c in combined]
+
+    # Apply specific species logic (Ninfas/Agapornis)
+    # Whiteface/Blue masks Psittacine (Yellow/Red)
+    # Ino masks Melanin
+    combined = [apply_phenotype_rules(c) for c in combined]
 
     # Probabilidades
     expanded = []
-
     for c in combined:
-        if c["sex"] == "Any":
+        if c["sex"] == "Any" or not c["sex"]:
             expanded.append({**c, "sex": "M"})
             expanded.append({**c, "sex": "H"})
         else:
@@ -339,11 +278,9 @@ def calculate_genetics(male_mutations, female_mutations, loci):
         counts[key] += 1
 
     results = []
-
     for key, count in counts.items():
         sex, pheno, geno = key
         prob = (count / total) * 100
-
         results.append({
             "sex": sex,
             "phenotype": pheno,
@@ -352,3 +289,107 @@ def calculate_genetics(male_mutations, female_mutations, loci):
         })
 
     return sorted(results, key=lambda x: (x["sex"], -x["probability"]))
+
+
+def apply_phenotype_rules(result):
+    """
+    Apply complex phenotype rules like masking (Epistasis).
+    Especially for Ninfas (Cockatiels) and Agapornis.
+    """
+    pheno_list = [p.lower() for p in result.get("pheno_list", [])]
+    original_pheno = result["phenotype"]
+    
+    # 1. Albino Logic (Lutino + Whiteface/Blue)
+    # Check for Ino (Lutino) AND Blue (Cara blanca / Whiteface)
+    has_ino = any('lutino' in p or 'ino' in p for p in pheno_list) 
+    has_blue = any('cara blanca' in p or 'whiteface' in p or 'azul' in p or 'turquesa' in p for p in pheno_list)
+    has_canela = any('canela' in p or 'cinnamon' in p for p in pheno_list)
+    has_perlado = any('perlado' in p or 'opaline' in p or 'pearl' in p for p in pheno_list)
+    has_pied = any('pied' in p or 'manchado' in p or 'arlequín' in p for p in pheno_list)
+    
+    # --- Renaming/Combination Logic ---
+    
+    # Albino (Priority)
+    if has_ino and has_blue:
+        if 'albino' not in original_pheno.lower():
+            original_pheno = original_pheno.replace("Lutino", "").replace("Cara blanca", "").replace("Carablanca", "").replace("Blue", "").replace(" + ", " ").strip()
+            original_pheno = "Albino " + original_pheno
+            
+    # Cinnamon Pearl
+    if has_canela and has_perlado:
+        if 'cinnamon pearl' not in original_pheno.lower():
+             # Replace individual parts with combined name
+             # Careful not to duplicate if source has multiples
+             original_pheno = original_pheno.replace("Canela", "").replace("Perlado", "").replace("Opalino", "").replace("Cinnamon", "").replace("Pearl", "").replace(" + ", " ").strip()
+             original_pheno = "Cinnamon Pearl " + original_pheno
+
+    # Whiteface Pied (Naming preference)
+    if has_blue and has_pied:
+        if 'whiteface pied' not in original_pheno.lower():
+            if "Cara blanca" in original_pheno:
+               original_pheno = original_pheno.replace("Cara blanca", "Whiteface")
+            original_pheno = original_pheno.replace("Whiteface + Pied", "Whiteface Pied")
+
+    # Lutino Pied
+    if has_ino and has_pied:
+        original_pheno = original_pheno.replace("Lutino + Pied", "Lutino Pied")
+        
+    # --- New Combinations from User List ---
+    
+    # Pearl Pied
+    if has_perlado and has_pied:
+        original_pheno = original_pheno.replace("Perlado + Pied", "Pearl Pied").replace("Opalino + Arlequín", "Pearl Pied")
+        
+    # Cinnamon Pied
+    if has_canela and has_pied:
+        original_pheno = original_pheno.replace("Canela + Pied", "Cinnamon Pied")
+
+    # Whiteface Cinnamon
+    if has_blue and has_canela:
+         original_pheno = original_pheno.replace("Cara blanca + Canela", "Whiteface Cinnamon").replace("Canela + Cara blanca", "Whiteface Cinnamon")
+
+    # Whiteface Pearl
+    if has_blue and has_perlado:
+         original_pheno = original_pheno.replace("Cara blanca + Perlado", "Whiteface Pearl").replace("Perlado + Cara blanca", "Whiteface Pearl")
+
+    # Whiteface Cinnamon Pearl (Tri-combo)
+    if has_blue and has_canela and has_perlado:
+        # Check if already partially combined into "Whiteface Cinnamon" or "Cinnamon Pearl" or "Whiteface Pearl"
+        # We want "Whiteface Cinnamon Pearl"
+        
+        # Simplest: If we have all three components, force the name.
+        # But we must preserve any OTHER traits (like Pied).
+        
+        # Strategy: Remove the 3 components from string, prepend "Whiteface Cinnamon Pearl"
+        # Components to remove: Whiteface, Cinnamon, Pearl, Canela, Perlado, Cara blanca, Cinnamon Pearl, Whiteface Cinnamon, etc.
+        
+        # We already ran Cinnamon Pearl logic above, so "Cinnamon Pearl" might be present.
+        # We ran Whiteface logic? Not really, just replacements.
+        
+        # Let's clean up
+        temp = original_pheno
+        temp = temp.replace("Whiteface Cinnamon", "").replace("Whiteface Pearl", "").replace("Cinnamon Pearl", "")
+        temp = temp.replace("Cara blanca", "").replace("Canela", "").replace("Perlado", "")
+        temp = temp.replace("Whiteface", "").replace("Cinnamon", "").replace("Pearl", "")
+        temp = temp.replace(" + ", " ").strip()
+        
+        original_pheno = "Whiteface Cinnamon Pearl " + temp
+
+    # Pastel Pied
+    has_pastel = any('pastel' in p for p in pheno_list)
+    if has_pastel and has_pied:
+        original_pheno = original_pheno.replace("Pastel + Pied", "Pastel Pied")
+
+    # Silver Pied
+    has_silver = any('silver' in p or 'plateado' in p for p in pheno_list)
+    if has_silver and has_pied:
+        original_pheno = original_pheno.replace("Silver + Pied", "Silver Pied").replace("Plateado + Pied", "Silver Pied")
+
+    # Clean up
+    original_pheno = " ".join(original_pheno.split())
+    original_pheno = original_pheno.replace(" + ", " ") # Remove stray pluses
+    original_pheno = original_pheno.replace("  ", " ")
+    
+    result["phenotype"] = original_pheno
+    
+    return result

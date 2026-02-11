@@ -316,10 +316,16 @@ export const BreedingView = async () => {
                             Puesta #${c.numero_nidada} <span style="font-weight: 400; color: #64748b; font-size: 0.9rem;">(${c.estado})</span>
                             <button class="btn-delete-clutch" data-id="${c.id_nidada}" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left:0.5rem;">🗑️</button>
                         </span>
-                        <div style="text-align: right;">
-                             <label style="font-size: 0.85rem; font-weight: 500; margin-right: 0.5rem;">Fecha Inicio:</label>
-                             <input type="date" class="input-date-clutch" data-id="${c.id_nidada}" value="${c.fecha_primer_huevo || ''}" style="border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 5px; font-size: 0.85rem;">
-                             <span style="font-size: 0.9rem; color: var(--text-secondary); display:block; margin-top: 0.25rem;">Eclosión (~${daysIncubation}d): <strong>${hatchStr}</strong></span>
+                        <div style="text-align: right; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-end;">
+                             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.85rem; font-weight: 500;">Inicio (Puesta):</label>
+                                <input type="date" class="input-date-clutch" data-id="${c.id_nidada}" value="${c.fecha_primer_huevo || ''}" style="border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 5px; font-size: 0.85rem;">
+                             </div>
+                             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.85rem; font-weight: 500;">Eclosión (Real):</label>
+                                <input type="date" class="input-hatch-clutch" data-id="${c.id_nidada}" value="${c.fecha_nacimiento || ''}" style="border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 5px; font-size: 0.85rem;">
+                             </div>
+                             <span style="font-size: 0.8rem; color: var(--text-secondary);">Prevista (~${daysIncubation}d): <strong>${hatchStr}</strong></span>
                              ${speciesInfo ? `<span style="font-size: 0.75rem; color: #64748b;">${speciesInfo.especie} (${speciesInfo.temperatura_incubacion}°C / ${speciesInfo.humedad_incubacion}%)</span>` : ''}
                         </div>
                     </div>
@@ -373,18 +379,24 @@ export const BreedingView = async () => {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        // Don't re-render full list for date change to keep focus? 
-                        // Actually re-rendering updates the Hatch Date calculation immediately.
-                        renderClutches(pairId);
+                        // Update local object to reflect changes without full re-render if possible, but re-render is safer for derived values
+                        // actually we can just update 'c' object in memory?
+                        Object.assign(c, payload);
+                        if (payload.fecha_primer_huevo) renderClutches(pairId); // Re-render for calculation
                     } catch (e) {
                         console.error(e);
                     }
                 };
 
-                // Date Change Listener
+                // Date Change Listeners
                 const dateInput = div.querySelector('.input-date-clutch');
                 dateInput.addEventListener('change', (e) => {
                     saveClutchData(c.id_nidada, { fecha_primer_huevo: e.target.value });
+                });
+
+                const hatchInput = div.querySelector('.input-hatch-clutch');
+                hatchInput.addEventListener('change', (e) => {
+                    saveClutchData(c.id_nidada, { fecha_nacimiento: e.target.value });
                 });
 
                 // Bind Logic for counters
@@ -399,7 +411,51 @@ export const BreedingView = async () => {
                             return;
                         }
                     }
+
+                    // Automatic bird registration on incrementing "Anillados"
+                    if (field === 'pollos_anillados' && delta > 0) {
+                        if (confirm('¿Desea registrar este nuevo pájaro anillado en el sistema?')) {
+
+                            // Determine Species Logic
+                            const male = birds.find(b => b.id_ave == pair.id_macho);
+                            const female = birds.find(b => b.id_ave == pair.id_hembra);
+                            let speciesIdToUse = null;
+
+                            // If both parents are same species, use it.
+                            if (male && female && male.id_especie === female.id_especie) {
+                                speciesIdToUse = male.id_especie;
+                            }
+                            // Fallback: If not same, we leave it null for User to decide (Hybrid or explicit choice)
+                            // Or default to male's if we wanted. But user said "si es puro o híbrido", implies checking.
+
+                            const birthDate = c.fecha_nacimiento || new Date().toISOString().split('T')[0];
+
+                            import('./birds.js').then(module => {
+                                module.openBirdModal({
+                                    initialData: {
+                                        fecha_nacimiento: birthDate,
+                                        padre_uuid: pair.id_macho,
+                                        madre_uuid: pair.id_hembra,
+                                        id_especie: speciesIdToUse,
+                                        estado: 'Activo'
+                                    },
+                                    onSave: () => {
+                                        // Once saved, we update the counter in the clutch
+                                        saveClutchData(c.id_nidada, { [field]: newVal });
+                                        // Update UI immediately
+                                        div.querySelector(`span`).textContent = newVal; // This selector is too broad, but re-render comes next
+                                        renderClutches(pairId);
+                                    }
+                                });
+                            });
+                            return; // Don't save immediately, wait for modal
+                        }
+                    }
+
                     saveClutchData(c.id_nidada, { [field]: newVal });
+                    // Visual update
+                    const box = div.querySelector(`button[data-field="${field}"]`).parentNode.querySelector('span');
+                    if (box) box.textContent = newVal;
                 };
 
                 div.querySelectorAll('.btn-dec').forEach(b => {

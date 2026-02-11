@@ -89,14 +89,43 @@ class DatabaseService {
     }
 
 
-    async getMutations(species) {
-        if (!species) return [];
+    async getVarieties(speciesUuid) {
         try {
-            const response = await fetch(`${this.baseUrl}/mutations?species=${encodeURIComponent(species)}`);
+            const url = speciesUuid ? `${this.baseUrl}/variedades?species_uuid=${speciesUuid}` : `${this.baseUrl}/variedades`;
+            const response = await fetch(url);
+            if (!response.ok) return [];
+            return await response.json();
+        } catch (e) {
+            console.error("Error fetching varieties", e);
+            return [];
+        }
+    }
+
+    async getMutations(species, variety_uuid) {
+        try {
+            let url = `${this.baseUrl}/mutations`;
+            if (variety_uuid) {
+                url += `?variety_uuid=${variety_uuid}`;
+            } else if (species) {
+                url += `?species=${encodeURIComponent(species)}`;
+            }
+            const response = await fetch(url);
             if (!response.ok) return [];
             return await response.json();
         } catch (e) {
             console.error("Error fetching mutations", e);
+            return [];
+        }
+    }
+
+    async getBreeds(variety_uuid) {
+        try {
+            const url = variety_uuid ? `${this.baseUrl}/canary_breeds?variety_uuid=${variety_uuid}` : `${this.baseUrl}/canary_breeds`;
+            const response = await fetch(url);
+            if (!response.ok) return [];
+            return await response.json();
+        } catch (e) {
+            console.error("Error fetching breeds", e);
             return [];
         }
     }

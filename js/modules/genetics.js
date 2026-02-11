@@ -104,13 +104,14 @@ export const GeneticsView = async () => {
     // Init Logic
     const init = async () => {
         try {
-            const res = await fetch('/api/genetics/species');
+            const res = await fetch('/api/species');
             const speciesList = await res.json();
 
             speciesList.forEach(sp => {
                 const opt = document.createElement('option');
-                opt.value = sp;
-                opt.textContent = sp;
+                const name = typeof sp === 'string' ? sp : sp.nombre_comun;
+                opt.value = name;
+                opt.textContent = name;
                 speciesSelect.appendChild(opt);
             });
         } catch (e) {

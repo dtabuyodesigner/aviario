@@ -1,7 +1,0 @@
-.nav-link.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-    cursor: not-allowed;
-    background: #f3f4f6;
-    color: #9ca3af;
-}

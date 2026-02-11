@@ -2,7 +2,7 @@ import os
 import sys
 from flask import Blueprint, request, jsonify
 from genetics_engine import calculate_genetics
-from genetics_db import load_loci_from_db
+from genetics_db import load_loci_from_db, load_combinations_from_db
 
 bp = Blueprint("genetics", __name__)
 
@@ -16,14 +16,10 @@ DB_PATH = os.path.join(BASE_DIR, 'database', 'aviario.db')
 
 # Trial Limit
 CALC_COUNT = 0
-MAX_CALCS = 3
+MAX_CALCS = 100
 
 @bp.route("/api/genetics/calculate", methods=["POST"])
 def calculate():
-    global CALC_COUNT
-    if CALC_COUNT >= MAX_CALCS:
-        return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 3 cálculos genéticos)'}), 403
-    
     try:
         data = request.json
         
@@ -34,14 +30,12 @@ def calculate():
         if not species:
             return jsonify({'error': 'Species is required'}), 400
 
-        # Increment count
-        CALC_COUNT += 1
-
         # Load Loci definitions from DB
         loci = load_loci_from_db(DB_PATH, species)
+        combos = load_combinations_from_db(DB_PATH)
 
         # Calculate
-        result = calculate_genetics(male, female, loci)
+        result = calculate_genetics(male, female, loci, combinations=combos)
 
         return jsonify(result)
         

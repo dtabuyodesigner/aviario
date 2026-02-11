@@ -1,5 +1,6 @@
 import sys
 import os
+import uuid
 
 # --- LOGGING SETUP (AS EARLY AS POSSIBLE) ---
 if getattr(sys, 'frozen', False):
@@ -20,11 +21,12 @@ logging.info("--- APPLICATION STARTUP ---")
 import sqlite3
 from flask import Flask, jsonify, request, send_from_directory, send_file
 from genetics_api import bp as genetics_bp
+from genealogy_api import bp as genealogy_bp
 import datetime
 from datetime import datetime, date, timedelta
 
 # Configuration
-TRIAL_MODE = True
+TRIAL_MODE = False
 
 # Configuration
 if getattr(sys, 'frozen', False):
@@ -74,8 +76,15 @@ def filter_data_for_table(table_name, data):
         columns = [row['name'] for row in cur.fetchall()]
         conn.close()
         
-        # Filter data
-        filtered = {k: v for k, v in data.items() if k in columns}
+        # Filter and clean data: convert empty strings to None
+        filtered = {}
+        for k, v in data.items():
+            if k in columns:
+                # Convert empty string or whitespace-only to None (NULL in SQL)
+                if isinstance(v, str) and v.strip() == "":
+                    filtered[k] = None
+                else:
+                    filtered[k] = v
         
         # Log if we ignored something (useful for debug)
         ignored = [k for k in data.keys() if k not in columns]
@@ -107,7 +116,8 @@ def init_db():
             ('fecha_compra', 'DATE'),
             ('tipo_compra', 'TEXT'),
             ('cites_numero', 'TEXT'),
-            ('documento_cesion', 'TEXT')
+            ('documento_cesion', 'TEXT'),
+            ('fecha_nacimiento', 'DATE')
         ]
         for col, col_type in pajaros_cols:
             try:
@@ -136,8 +146,19 @@ def init_db():
             try:
                 cur.execute(f"SELECT {col_name} FROM configuracion LIMIT 1")
             except sqlite3.OperationalError:
-                print(f"Migration: Adding '{col_name}' to 'configuracion'")
                 cur.execute(f"ALTER TABLE configuracion ADD COLUMN {col_name} {col_type}")
+                conn.commit()
+
+        # 4. Ensure 'nidadas' has 'fecha_nacimiento'
+        nidadas_cols = [
+            ('fecha_nacimiento', 'DATE')
+        ]
+        for col_name, col_type in nidadas_cols:
+            try:
+                cur.execute(f"SELECT {col_name} FROM nidadas LIMIT 1")
+            except sqlite3.OperationalError:
+                print(f"Migration: Adding '{col_name}' to 'nidadas'")
+                cur.execute(f"ALTER TABLE nidadas ADD COLUMN {col_name} {col_type}")
                 conn.commit()
 
     conn.close()
@@ -170,15 +191,21 @@ def index():
         logging.exception("Error al servir index.html")
         return str(e), 500
 
-@app.route('/<path:path>')
-def serve_static(path):
-    logging.debug(f"Solicitud de archivo estático: {path}")
-    return send_from_directory(ASSETS_DIR, path)
-
 @app.route('/api/ping')
 def ping():
     logging.info("Heartbeat/Ping recibido")
     return jsonify({'status': 'ok', 'message': 'Servidor funcionando correctamente'})
+
+# Register Blueprints
+app.register_blueprint(genetics_bp)
+app.register_blueprint(genealogy_bp)
+
+# Register New v2 Blueprints
+from app.api.birds import bp as birds_v2_bp
+app.register_blueprint(birds_v2_bp, url_prefix='/api/v2/birds')
+
+from app.api.genetics import bp as genetics_v2_bp
+app.register_blueprint(genetics_v2_bp, url_prefix='/api/v2/genetics')
 
 @app.route('/uploads/<path:filename>')
 def serve_uploads(filename):
@@ -190,7 +217,7 @@ def get_birds():
     conn = get_db_connection()
     # Join with species to get names
     sql = '''
-        SELECT p.*, e.nombre_comun as especie 
+        SELECT p.*, e.nombre_comun as especie, e.uuid as especie_uuid
         FROM pajaros p 
         LEFT JOIN especies e ON p.id_especie = e.id_especie
     '''
@@ -207,6 +234,9 @@ def add_bird():
     if file:
         data['foto_path'] = save_file(file)
         
+    if not data.get('id_especie') and not data.get('especie'):
+        return jsonify({'error': 'La especie es obligatoria'}), 400
+
     # --- TRIAL MODE LIMIT ---
     if not check_trial_limit("pajaros", 5, "estado = 'Activo'"):
         return jsonify({'error': 'Límite de la versión de prueba alcanzado (Máx 5 pájaros activos)'}), 403
@@ -230,7 +260,7 @@ def add_bird():
             species_name = data.pop('especie') # Remove 'especie' key, we want 'id_especie'
             
             # Look up ID
-            res = cur.execute('SELECT id_especie FROM especies WHERE nombre_comun = ?', (species_name,)).fetchone()
+            res = cur.execute('SELECT id_especie FROM especies WHERE LOWER(nombre_comun) = LOWER(?)', (species_name,)).fetchone()
             
             if res:
                 data['id_especie'] = res['id_especie']
@@ -242,6 +272,10 @@ def add_bird():
 
         if 'criador_externo' in data:
             data['id_criador_externo'] = data.pop('criador_externo')
+
+        # Ensure UUID exists
+        if 'uuid' not in data or not data['uuid']:
+            data['uuid'] = str(uuid.uuid4())
 
         # --- v2.0 Robust Filtering ---
         data = filter_data_for_table("pajaros", data)
@@ -485,19 +519,71 @@ def delete_bird_photo(photo_id):
     except sqlite3.Error as e:
         conn.close()
         return jsonify({'error': str(e)}), 400
+@app.route('/api/species', methods=['GET'])
+def get_species():
+    conn = get_db_connection()
+    species = conn.execute('SELECT * FROM especies ORDER BY nombre_comun').fetchall()
+    conn.close()
+    return jsonify([dict(ix) for ix in species])
+
+@app.route('/api/variedades', methods=['GET'])
+def get_variedades():
+    species_uuid = request.args.get('species_uuid')
+    conn = get_db_connection()
+    if species_uuid:
+        varieties = conn.execute('SELECT * FROM variedades WHERE especie_uuid = ? ORDER BY nombre', (species_uuid,)).fetchall()
+    else:
+        varieties = conn.execute('SELECT * FROM variedades ORDER BY nombre').fetchall()
+    conn.close()
+    return jsonify([dict(ix) for ix in varieties])
+
+@app.route('/api/canary_breeds', methods=['GET'])
+def get_canary_breeds():
+    variety_uuid = request.args.get('variety_uuid')
+    conn = get_db_connection()
+    if variety_uuid:
+        breeds = conn.execute('SELECT * FROM canary_breeds WHERE variedad_uuid = ? ORDER BY nombre', (variety_uuid,)).fetchall()
+    else:
+        breeds = conn.execute('SELECT * FROM canary_breeds ORDER BY tipo, nombre').fetchall()
+    conn.close()
+    return jsonify([dict(ix) for ix in breeds])
+
 @app.route('/api/mutations', methods=['GET'])
 def get_mutations():
     species_filter = request.args.get('species')
+    variety_uuid = request.args.get('variety_uuid')
     conn = get_db_connection()
     
-    if species_filter:
-        # Case insensitive search
-        mutations = conn.execute(
-            'SELECT * FROM mutaciones WHERE LOWER(especie_asociada) LIKE LOWER(?) ORDER BY subgrupo, nombre', 
-            (f'%{species_filter}%',)
-        ).fetchall()
+    if variety_uuid:
+        # User Variety-Mutation link
+        sql = '''
+            SELECT m.* 
+            FROM mutaciones m
+            JOIN variedad_mutaciones vm ON m.uuid = vm.mutacion_uuid
+            WHERE vm.variedad_uuid = ?
+            ORDER BY m.nombre
+        '''
+        mutations = conn.execute(sql, (variety_uuid,)).fetchall()
+    elif species_filter:
+        sql = '''
+            SELECT DISTINCT m.* 
+            FROM mutaciones m
+            JOIN variedad_mutaciones vm ON m.uuid = vm.mutacion_uuid
+            JOIN variedades v ON vm.variedad_uuid = v.uuid
+            JOIN especies e ON v.especie_uuid = e.uuid
+            WHERE LOWER(e.nombre_comun) = LOWER(?)
+            ORDER BY m.nombre
+        '''
+        mutations = conn.execute(sql, (species_filter,)).fetchall()
+        
+        # Fallback for Canaries if no mutations found via strict join
+        if not mutations and species_filter.lower() == 'canario':
+             sql = '''
+                SELECT * FROM mutaciones WHERE uuid LIKE 'mut-can-%' ORDER BY nombre
+             '''
+             mutations = conn.execute(sql).fetchall()
     else:
-        mutations = conn.execute('SELECT * FROM mutaciones ORDER BY especie_asociada, subgrupo, nombre').fetchall()
+        mutations = conn.execute('SELECT * FROM mutaciones ORDER BY nombre').fetchall()
     
     conn.close()
     return jsonify([dict(ix) for ix in mutations])
@@ -1125,6 +1211,12 @@ def get_incubation_parameters():
     params = conn.execute('SELECT * FROM parametros_incubacion').fetchall()
     conn.close()
     return jsonify([dict(ix) for ix in params])
+
+# Catch-all for static files / Frontend Routing
+@app.route('/<path:path>')
+def serve_static(path):
+    logging.debug(f"Solicitud de archivo estático: {path}")
+    return send_from_directory(ASSETS_DIR, path)
 
 import webbrowser
 import threading
