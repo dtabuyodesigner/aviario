@@ -43,9 +43,9 @@ export const HealthView = async () => {
     const loadData = async () => {
         try {
             const [active, all, recipes, birds] = await Promise.all([
-                fetch('/api/treatments?active=true').then(r => r.json()),
-                fetch('/api/treatments').then(r => r.json()),
-                fetch('/api/recipes').then(r => r.json()),
+                fetch('/api/v2/health/treatments?active=true').then(r => r.json()),
+                fetch('/api/v2/health/treatments').then(r => r.json()),
+                fetch('/api/v2/health/recipes').then(r => r.json()),
                 db.getAll('birds')
             ]);
 
@@ -179,7 +179,7 @@ export const HealthView = async () => {
         container.querySelectorAll('.btn-del-recipe').forEach(btn => {
             btn.addEventListener('click', async () => {
                 if (confirm('¿Eliminar esta receta?')) {
-                    await fetch(`/api/recipes/${btn.dataset.id}`, { method: 'DELETE' });
+                    await fetch(`/api/v2/health/recipes/${btn.dataset.id}`, { method: 'DELETE' });
                     loadData();
                 }
             });
@@ -199,7 +199,7 @@ export const HealthView = async () => {
         if (!result) return;
 
         try {
-            await db.update('treatments', id, {
+            await db.update('health/treatments', id, {
                 estado: 'Finalizado',
                 resultado: result,
                 fecha_fin: new Date().toISOString().split('T')[0]
@@ -242,7 +242,7 @@ export const HealthView = async () => {
             };
             if (!data.nombre_receta) return alert("Nombre obligatorio");
 
-            const url = isEdit ? `/api/recipes/${recipe.id_receta}` : '/api/recipes';
+            const url = isEdit ? `/api/v2/health/recipes/${recipe.id_receta}` : '/api/v2/health/recipes';
             const method = isEdit ? 'PUT' : 'POST';
 
             await fetch(url, {
@@ -395,7 +395,7 @@ export const HealthView = async () => {
                     fecha_fin: endDateStr
                 };
 
-                await db.add('treatments', data);
+                await db.add('health/treatments', data);
                 loadData();
             });
 

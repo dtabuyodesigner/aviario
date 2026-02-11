@@ -111,15 +111,15 @@ export const BreedingView = async () => {
     const loadData = async () => {
         try {
             // Load Pairs
-            const resPairs = await fetch('/api/pairs');
+            const resPairs = await fetch('/api/v2/breeding/pairs');
             currentPairs = await resPairs.json(); // Store in wider scope
 
             // Load Birds for Selectors
-            const resBirds = await fetch('/api/birds');
+            const resBirds = await fetch('/api/v2/birds');
             birds = await resBirds.json();
 
             // Load Incubation Params
-            const resInc = await fetch('/api/incubation-parameters');
+            const resInc = await fetch('/api/v2/breeding/incubation-parameters');
             if (resInc.ok) incubationParams = await resInc.json();
 
             renderPairs(currentPairs);
@@ -206,7 +206,7 @@ export const BreedingView = async () => {
                 if (confirm('¿Seguro que quieres eliminar esta pareja? Se borrarán también sus nidadas.')) {
                     const id = btn.getAttribute('data-id');
                     try {
-                        const res = await fetch(`/api/pairs/${id}`, { method: 'DELETE' });
+                        const res = await fetch(`/api/v2/breeding/pairs/${id}`, { method: 'DELETE' });
                         if (res.ok) loadData();
                         else alert('Error eliminando pareja');
                     } catch (e) { console.error(e); }
@@ -241,7 +241,7 @@ export const BreedingView = async () => {
     const renderClutches = async (pairId) => {
         clutchesContainer.innerHTML = 'Cargando...';
         try {
-            const res = await fetch(`/api/pairs/${pairId}/clutches`);
+            const res = await fetch(`/api/v2/breeding/pairs/${pairId}/clutches`);
             const clutches = await res.json();
 
             // Determine Species & Incubation Days
@@ -374,7 +374,7 @@ export const BreedingView = async () => {
                 // API Helper
                 const saveClutchData = async (id, payload) => {
                     try {
-                        await fetch(`/api/clutches/${id}`, {
+                        await fetch(`/api/v2/breeding/clutches/${id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -467,7 +467,7 @@ export const BreedingView = async () => {
 
                 div.querySelector('.btn-delete-clutch').onclick = async () => {
                     if (confirm('¿Eliminar esta nidada?')) {
-                        await fetch(`/api/clutches/${c.id_nidada}`, { method: 'DELETE' });
+                        await fetch(`/api/v2/breeding/clutches/${c.id_nidada}`, { method: 'DELETE' });
                         renderClutches(pairId);
                     }
                 };
@@ -482,7 +482,7 @@ export const BreedingView = async () => {
         const count = clutchesContainer.children.length + 1;
 
         try {
-            await fetch('/api/clutches', {
+            await fetch('/api/v2/breeding/clutches', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -629,14 +629,14 @@ export const BreedingView = async () => {
             let res;
             if (editingPairId) {
                 // UPDATE
-                res = await fetch(`/api/pairs/${editingPairId}`, {
+                res = await fetch(`/api/v2/breeding/pairs/${editingPairId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
             } else {
                 // CREATE
-                res = await fetch('/api/pairs', {
+                res = await fetch('/api/v2/breeding/pairs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

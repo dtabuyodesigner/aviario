@@ -55,3 +55,11 @@ class VariedadMutacion(BaseModel, TimestampMixin, SoftDeleteMixin):
     uuid = db.Column(db.String, primary_key=True)
     variedad_uuid = db.Column(db.String, db.ForeignKey('variedades.uuid'), nullable=False)
     mutacion_uuid = db.Column(db.String, db.ForeignKey('mutaciones.uuid'), nullable=False)
+
+class CanaryBreed(BaseModel, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = 'canary_breeds'
+    
+    id_breed = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre = db.Column(db.String, nullable=False)
+    tipo = db.Column(db.String)
+    variedad_uuid = db.Column(db.String) # Linking loosely to variedad uuid

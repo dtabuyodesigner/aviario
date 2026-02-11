@@ -5,7 +5,7 @@
 
 class DatabaseService {
     constructor() {
-        this.baseUrl = '/api';
+        this.baseUrl = '/api/v2';
     }
 
     async init() {
@@ -14,7 +14,10 @@ class DatabaseService {
     }
 
     async getAll(table) {
-        if (table === 'birds') table = 'birds'; // Endpoint is /api/birds
+        // v2 endpoints
+        if (table === 'birds') table = 'birds';
+        // Logic remains similar if endpoints match table names
+        // /api/v2/birds works.
 
         try {
             const response = await fetch(`${this.baseUrl}/${table}`);
@@ -91,7 +94,10 @@ class DatabaseService {
 
     async getVarieties(speciesUuid) {
         try {
-            const url = speciesUuid ? `${this.baseUrl}/variedades?species_uuid=${speciesUuid}` : `${this.baseUrl}/variedades`;
+            // v2: /api/v2/genetics/varieties?species_uuid=...
+            // Note: baseUrl is /api/v2. genetics endpoints are under /genetics prefix.
+            // So url should be /api/v2/genetics/varieties
+            const url = speciesUuid ? `${this.baseUrl}/genetics/varieties?species_uuid=${speciesUuid}` : `${this.baseUrl}/genetics/varieties`;
             const response = await fetch(url);
             if (!response.ok) return [];
             return await response.json();
@@ -103,7 +109,7 @@ class DatabaseService {
 
     async getMutations(species, variety_uuid) {
         try {
-            let url = `${this.baseUrl}/mutations`;
+            let url = `${this.baseUrl}/genetics/mutations`;
             if (variety_uuid) {
                 url += `?variety_uuid=${variety_uuid}`;
             } else if (species) {
@@ -120,7 +126,24 @@ class DatabaseService {
 
     async getBreeds(variety_uuid) {
         try {
-            const url = variety_uuid ? `${this.baseUrl}/canary_breeds?variety_uuid=${variety_uuid}` : `${this.baseUrl}/canary_breeds`;
+            // canary_breeds not implemented in v2 config yet!
+            // assuming legacy fallback or need to find new endpoint.
+            // For now, let's point to /api/v2/genetics/canary_breeds if I implement it, or keep it legacy?
+            // User requirement: "All frontend we have".
+            // I haven't implemented canary_breeds in v2.
+            // I should implement it or route to legacy?
+            // But legacy is app.py which is not running if I run run.py?
+            // Actually app.py IS legacy code but run.py uses new app factory.
+            // Unless I reimplement canary_breeds in v2, it won't work.
+            // I will implement stub or reuse genetics?
+            // Canary breeds essentially are varieties or mutations in some contexts?
+            // In legacy schema `canary_breeds` is a table.
+
+            // I'll leave it pointing to /api/canary_breeds (legacy) for now? No, run.py runs on 8000.
+            // If I don't implement it, it 404s.
+            // I should implement it quickly in genetics API.
+
+            const url = variety_uuid ? `${this.baseUrl}/genetics/canary_breeds?variety_uuid=${variety_uuid}` : `${this.baseUrl}/genetics/canary_breeds`;
             const response = await fetch(url);
             if (!response.ok) return [];
             return await response.json();

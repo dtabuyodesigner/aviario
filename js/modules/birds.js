@@ -12,7 +12,7 @@ export const BirdsView = async () => {
 
     async function fetchBirds() {
         try {
-            const response = await fetch('/api/birds');
+            const response = await fetch('/api/v2/birds/');
             allBirds = await response.json();
             applyFilters();
         } catch (error) {
@@ -31,8 +31,7 @@ export const BirdsView = async () => {
             const searchMatch = !searchTerm ||
                 (bird.anilla && bird.anilla.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (bird.especie && bird.especie.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (bird.mutacion_visual && bird.mutacion_visual.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (bird.portador_de && bird.portador_de.toLowerCase().includes(searchTerm.toLowerCase()));
+                (bird.variedad && bird.variedad.toLowerCase().includes(searchTerm.toLowerCase()));
 
             return statusMatch && searchMatch;
         });
@@ -63,7 +62,7 @@ export const BirdsView = async () => {
                         </div>
                         <div>
                             <div style="font-weight: 600; color: var(--text-primary);">${bird.anilla || 'Sin anilla'}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${bird.fecha_nacimiento || bird.anio_nacimiento || ''}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">${bird.fecha_nacimiento || ''}</div>
                         </div>
                     </div>
                 </td>
@@ -75,8 +74,7 @@ export const BirdsView = async () => {
                     </span>
                 </td>
                 <td style="padding: 0.75rem;">
-                    <div>${bird.mutacion_visual || 'Ancestral'}</div>
-                    ${bird.portador_de ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">/ Port.: ${bird.portador_de}</div>` : ''}
+                    <div>${bird.variedad || 'Ancestral'}</div>
                 </td>
                 <td style="padding: 0.75rem;">
                     <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;
@@ -91,10 +89,26 @@ export const BirdsView = async () => {
                     </div>
                 </td>
                 <td style="padding: 0.75rem;">
-                    <button class="btn btn-sm btn-edit" data-bird-id="${bird.id_ave}" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Ver</button>
+                    <button class="btn btn-sm btn-edit" data-bird-id="${bird.uuid}" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Ver</button>
+                    <button class="btn btn-sm btn-delete" data-bird-id="${bird.uuid}" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; background: #fee2e2; color: #991b1b; border: none; margin-left: 0.5rem;">Borrar</button>
                 </td>
             `;
-            tr.querySelector('.btn-edit').addEventListener('click', () => openBirdModal({ birdId: bird.id_ave, onSave: fetchBirds }));
+            tr.querySelector('.btn-edit').addEventListener('click', (e) => {
+                e.stopPropagation();
+                openBirdModal({ birdId: bird.uuid, onSave: fetchBirds });
+            });
+            tr.querySelector('.btn-delete').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm('¿Estás seguro de que deseas borrar este pájaro?')) {
+                    try {
+                        const res = await fetch(`/api/v2/birds/${bird.uuid}`, { method: 'DELETE' });
+                        if (res.ok) fetchBirds();
+                        else alert('Error al borrar');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            });
             tbody.appendChild(tr);
         });
     }
@@ -113,7 +127,7 @@ export const BirdsView = async () => {
             <div style="background: white; padding: 1rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); margin-bottom: 1rem;">
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
                     <div style="flex: 1; min-width: 250px;">
-                        <input type="text" id="search-input" placeholder="Buscar por anilla, especie o mutación..." style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <input type="text" id="search-input" placeholder="Buscar por anilla, especie o variedad..." style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="filter-btn active" data-filter="all" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer;">Todos</button>
@@ -131,7 +145,7 @@ export const BirdsView = async () => {
                             <th style="padding: 0.75rem; text-align: left;">Pájaro</th>
                             <th style="padding: 0.75rem; text-align: left;">Especie</th>
                             <th style="padding: 0.75rem; text-align: left;">Sexo</th>
-                            <th style="padding: 0.75rem; text-align: left;">Mutación</th>
+                            <th style="padding: 0.75rem; text-align: left;">Variedad</th>
                             <th style="padding: 0.75rem; text-align: left;">Estado</th>
                             <th style="padding: 0.75rem; text-align: left;">Disponibilidad</th>
                             <th style="padding: 0.75rem; text-align: left;">Acciones</th>
@@ -166,17 +180,43 @@ export const BirdsView = async () => {
 export async function openBirdModal({ birdId = null, initialData = {}, onSave = null } = {}) {
     let bird = {};
     if (birdId) {
-        const res = await fetch('/api/birds');
-        const all = await res.json();
-        bird = all.find(b => b.id_ave == birdId || b.uuid == birdId) || {};
+        try {
+            const res = await fetch(`/api/v2/birds/${birdId}`);
+            if (res.ok) {
+                bird = await res.json();
+            } else {
+                console.error('Error loading bird:', await res.text());
+                bird = {};
+            }
+        } catch (error) {
+            console.error('Error fetching bird:', error);
+            bird = {};
+        }
     } else {
         bird = initialData;
     }
 
-    const resSpec = await fetch('/api/species');
-    const loadedSpecies = await resSpec.json();
-    const resAll = await fetch('/api/birds');
-    const allBirds = await resAll.json();
+    // Load species list
+    let loadedSpecies = [];
+    try {
+        const resSpec = await fetch('/api/v2/genetics/species');
+        if (resSpec.ok) {
+            loadedSpecies = await resSpec.json();
+        }
+    } catch (error) {
+        console.error('Error fetching species:', error);
+    }
+
+    // Load all birds (for parent selectors)
+    let allBirds = [];
+    try {
+        const resAll = await fetch('/api/v2/birds/');
+        if (resAll.ok) {
+            allBirds = await resAll.json();
+        }
+    } catch (error) {
+        console.error('Error fetching birds:', error);
+    }
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -185,116 +225,114 @@ export async function openBirdModal({ birdId = null, initialData = {}, onSave = 
     const content = document.createElement('div');
     content.style.cssText = 'background: white; border-radius: var(--radius-lg); max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl);';
 
-    let selectedVisual = bird.mutacion_visual ? bird.mutacion_visual.split(',').map(s => s.trim()).filter(s => s) : [];
-    let selectedCarrier = bird.portador_de ? bird.portador_de.split(',').map(s => s.trim()).filter(s => s) : [];
+    let selectedGenetica = bird.genetica || [];
 
     content.innerHTML = `
         <div style="position: sticky; top: 0; background: white; border-bottom: 1px solid var(--border-color); padding: 1.5rem; z-index: 10; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="margin: 0;">${birdId ? 'Editar Pájaro' : 'Registrar Pájaro'}</h2>
+            <h2 style="margin: 0;">${birdId ? 'Detalle Pájaro' : 'Registrar Pájaro'}</h2>
             <button id="close-modal" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         <form id="bird-form" style="padding: 1.5rem;">
-            <input type="hidden" name="id_ave" value="${bird.id_ave || ''}">
-            <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <legend style="font-weight: 600; padding: 0 0.5rem;">Información Básica</legend>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                        <label>Anilla *</label>
-                        <input type="text" name="anilla" value="${bird.anilla || ''}" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                    </div>
-                    <div>
-                        <label>Fecha de Nacimiento</label>
-                        <input type="date" name="fecha_nacimiento" value="${bird.fecha_nacimiento || ''}" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                    </div>
-                    <div>
-                        <label>Sexo</label>
-                        <select name="sexo" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="?" ${bird.sexo === '?' ? 'selected' : ''}>Pendiente</option>
-                            <option value="M" ${bird.sexo === 'M' ? 'selected' : ''}>Macho</option>
-                            <option value="H" ${bird.sexo === 'H' ? 'selected' : ''}>Hembra</option>
-                        </select>
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <legend style="font-weight: 600; padding: 0 0.5rem;">Genética y Especie</legend>
-                <div style="display: grid; gap: 1rem;">
-                    <div style="grid-column: span 2;">
-                        <label>Especie *</label>
-                        <select name="id_especie" id="species-select" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="">Seleccionar...</option>
-                            ${loadedSpecies.map(s => `<option value="${s.id_especie}" ${bird.id_especie === s.id_especie ? 'selected' : ''}>${s.nombre_comun}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div id="mutations-section">
-                        <label>Mutación Visual</label>
-                        <div id="visual-tags" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;"></div>
-                        <select id="visual-select" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="">Añadir mutación...</option>
-                        </select>
-                        <input type="hidden" name="mutacion_visual" id="hidden-visual" value="${bird.mutacion_visual || ''}">
-                        
-                        <label style="display:block; margin-top:1rem;">Portador de</label>
-                        <div id="carrier-tags" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;"></div>
-                        <select id="carrier-select" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="">Añadir mutación...</option>
-                        </select>
-                        <input type="hidden" name="portador_de" id="hidden-carrier" value="${bird.portador_de || ''}">
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <legend style="font-weight: 600; padding: 0 0.5rem;">Estado y Disponibilidad</legend>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                        <label>Estado</label>
-                        <select name="estado" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="Activo" ${bird.estado === 'Activo' ? 'selected' : ''}>Activo</option>
-                            <option value="Cedido" ${bird.estado === 'Cedido' ? 'selected' : ''}>Cedido</option>
-                            <option value="Vendido" ${bird.estado === 'Vendido' ? 'selected' : ''}>Vendido</option>
-                            <option value="Baja" ${bird.estado === 'Baja' ? 'selected' : ''}>Baja</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
-                            <input type="checkbox" name="disponible_venta" ${Number(bird.disponible_venta) === 1 ? 'checked' : ''}> Disponible para Cesión
-                        </label>
-                    </div>
-                    <div>
-                        <label style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
-                            <input type="checkbox" name="reservado" ${Number(bird.reservado) === 1 ? 'checked' : ''}> Reservado
-                        </label>
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <legend style="font-weight: 600; padding: 0 0.5rem;">Genealogía</legend>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                        <label>Padre (Macho)</label>
-                        <select name="padre_uuid" id="parent-male" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="">Desconocido</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Madre (Hembra)</label>
-                        <select name="parent-female" id="parent-female" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                            <option value="">Desconocido</option>
-                        </select>
-                    </div>
-                </div>
-            </fieldset>
-            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+            <input type="hidden" name="uuid" value="${bird.uuid || ''}">
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                <!-- Column 1: Info Básica -->
                 <div>
-                   ${bird.uuid ? `<button type="button" id="btn-cert" class="btn" style="background: #0ea5e9; color: white;">📄 Certificado (PDF)</button>` : ''}
+                    <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                        <legend style="font-weight: 600; padding: 0 0.5rem;">Información Básica</legend>
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label>Anilla *</label>
+                                <input type="text" name="anilla" value="${bird.anilla || ''}" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                            </div>
+                            <div>
+                                <label>Fecha de Nacimiento</label>
+                                <input type="date" name="fecha_nacimiento" value="${bird.fecha_nacimiento || ''}" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                            </div>
+                            <div>
+                                <label>Sexo</label>
+                                <select name="sexo" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="?" ${bird.sexo === '?' ? 'selected' : ''}>Pendiente</option>
+                                    <option value="M" ${bird.sexo === 'M' ? 'selected' : ''}>Macho</option>
+                                    <option value="H" ${bird.sexo === 'H' ? 'selected' : ''}>Hembra</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Estado</label>
+                                <select name="estado" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="Activo" ${bird.estado === 'Activo' ? 'selected' : ''}>Activo</option>
+                                    <option value="Cedido" ${bird.estado === 'Cedido' ? 'selected' : ''}>Cedido</option>
+                                    <option value="Vendido" ${bird.estado === 'Vendido' ? 'selected' : ''}>Vendido</option>
+                                    <option value="Baja" ${bird.estado === 'Baja' ? 'selected' : ''}>Baja</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                        <legend style="font-weight: 600; padding: 0 0.5rem;">Genealogía</legend>
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label>Padre (UUID)</label>
+                                <select name="padre_uuid" id="parent-male" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="">Desconocido</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Madre (UUID)</label>
+                                <select name="madre_uuid" id="parent-female" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="">Desconocido</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
                 </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button type="button" id="cancel-modal" class="btn">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+
+                <!-- Column 2: Especie y Genética -->
+                <div>
+                    <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                        <legend style="font-weight: 600; padding: 0 0.5rem;">Clasificación y Genética</legend>
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label>Especie *</label>
+                                <select id="species-select" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="">Seleccionar Especie...</option>
+                                    ${loadedSpecies.map(s => `<option value="${s.uuid}" ${bird.especie === s.nombre_comun ? 'selected' : ''}>${s.nombre_comun}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div id="variety-container">
+                                <label>Variedad *</label>
+                                <select name="variety_uuid" id="variety-select" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="">Seleccionar Variedad...</option>
+                                </select>
+                            </div>
+                            <div id="mutations-container" style="margin-top: 1rem;">
+                                <label>Mutaciones (Genética)</label>
+                                <div id="genetica-tags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+                                <select id="mutation-select" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                    <option value="">Añadir Mutación...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md);">
+                        <legend style="font-weight: 600; padding: 0 0.5rem;">Otras Opciones</legend>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <label style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="disponible_venta" ${Number(bird.disponible_venta) === 1 ? 'checked' : ''}> Disponible para Cesión
+                            </label>
+                            <label style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="reservado" ${Number(bird.reservado) === 1 ? 'checked' : ''}> Reservado
+                            </label>
+                        </div>
+                    </fieldset>
                 </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; position: sticky; bottom: 0; background: white; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <button type="button" id="cancel-modal" class="btn">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
             </div>
         </form>
     `;
@@ -304,217 +342,119 @@ export async function openBirdModal({ birdId = null, initialData = {}, onSave = 
 
     const form = content.querySelector('#bird-form');
     const speciesSelect = form.querySelector('#species-select');
-    const visualSelect = form.querySelector('#visual-select');
-    const carrierSelect = form.querySelector('#carrier-select');
-    const maleSelect = form.querySelector('#parent-male');
-    const femaleSelect = form.querySelector('#parent-female');
+    const varietySelect = form.querySelector('#variety-select');
+    const mutationSelect = form.querySelector('#mutation-select');
+    const geneticaTags = form.querySelector('#genetica-tags');
 
-    const renderTags = (containerId, list, hiddenId, type) => {
-        const container = form.querySelector(containerId);
-        container.innerHTML = '';
-        list.forEach(item => {
+    const renderGeneticaTags = () => {
+        geneticaTags.innerHTML = '';
+        selectedGenetica.forEach((g, index) => {
             const tag = document.createElement('span');
-            tag.style.cssText = `background:#e0f2fe; color:#0369a1; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.85rem; display:flex; align-items:center; gap:0.25rem;`;
-            tag.innerHTML = `${item} <span style="cursor:pointer; font-weight:bold;">&times;</span>`;
+            tag.style.cssText = 'background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;';
+            tag.innerHTML = `${g.mutacion || g.mutacion_uuid} <span style="cursor: pointer; font-weight: bold; font-size: 1.1rem;">&times;</span>`;
             tag.querySelector('span').onclick = () => {
-                const idx = list.indexOf(item);
-                if (idx > -1) list.splice(idx, 1);
-                renderTags(containerId, list, hiddenId, type);
+                selectedGenetica.splice(index, 1);
+                renderGeneticaTags();
             };
-            container.appendChild(tag);
+            geneticaTags.appendChild(tag);
         });
-        form.querySelector(hiddenId).value = list.join(', ');
     };
 
-    // Helper to group and sort mutations
-    const groupAndSortMutations = (mutations) => {
-        // Preferred Order
-        const order = [
-            "Serie base",
-            "Base",
-            "Factor Oscuro",
-            "Ligadas al sexo", "Ligadas al Sexo",
-            "Diluciones",
-            "Alas y Patrones", "Patrones",
-            "Factores Faciales",
-            "Avanzadas",
-            "Mutaciones raras o avanzadas",
-            "Mutaciones raras"
-        ];
+    const loadVarieties = async (speciesUuid) => {
+        if (!speciesUuid) {
+            varietySelect.innerHTML = '<option value="">Seleccionar Variedad...</option>';
+            return;
+        }
+        const res = await fetch(`/api/v2/genetics/species/${speciesUuid}/varieties`);
+        const varieties = await res.json();
+        varietySelect.innerHTML = '<option value="">Seleccionar Variedad...</option>' +
+            varieties.map(v => `<option value="${v.uuid}" ${bird.variety_uuid === v.uuid ? 'selected' : ''}>${v.nombre}</option>`).join('');
 
-        // Grouping
-        const groups = {};
-        mutations.forEach(m => {
-            const group = m.subgrupo || 'Otros';
-            if (!groups[group]) groups[group] = [];
-            groups[group].push(m);
-        });
-
-        // Sorting keys
-        const sortedKeys = Object.keys(groups).sort((a, b) => {
-            const idxA = order.indexOf(a);
-            const idxB = order.indexOf(b);
-
-            // Handle "Otros" to be last
-            if (a === 'Otros') return 1;
-            if (b === 'Otros') return -1;
-
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return a.localeCompare(b);
-        });
-
-        // Generate HTML
-        let html = '';
-        sortedKeys.forEach(key => {
-            if (key === 'Otros' && sortedKeys.length === 1) {
-                // If only 'Otros' exists (e.g. Canaries), don't show optgroup label
-                html += groups[key].map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
-            } else if (key === 'Otros') {
-                html += `<optgroup label="Otros">`;
-                html += groups[key].map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
-                html += `</optgroup>`;
-            } else {
-                html += `<optgroup label="${key}">`;
-                html += groups[key].map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
-                html += `</optgroup>`;
-            }
-        });
-
-        return html;
-    };
-
-    const loadMutations = async () => {
-        const id = speciesSelect.value;
-        const sp = loadedSpecies.find(s => s.id_especie == id);
-
-        // Clear previous dynamic fields
-        const varietyContainer = form.querySelector('#variety-section');
-        if (varietyContainer) varietyContainer.remove();
-
-        visualSelect.innerHTML = '<option value="">Añadir mutación...</option>';
-        carrierSelect.innerHTML = '<option value="">Añadir mutación...</option>';
-
-        if (!sp) return;
-
-        // 1. Check for Varieties (Sub-types like Canary Color, Posture, Song)
-        let varieties = await db.getVarieties(sp.uuid || sp.id_especie); // Fallback to id if uuid missing in object
-
-        if (varieties && varieties.length > 0) {
-            // Create Variety Selector
-            let varDiv = document.createElement('div');
-            varDiv.id = 'variety-section';
-            varDiv.style.marginBottom = '1rem';
-            varDiv.innerHTML = `
-                <label>Tipo / Variedad</label>
-                <select id="variety-select" name="variety_uuid" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                    <option value="">Seleccionar Tipo...</option>
-                    ${varieties.map(v => `<option value="${v.uuid}" ${bird.variety_uuid == v.uuid ? 'selected' : ''}>${v.nombre}</option>`).join('')}
-                </select>
-            `;
-
-            // Insert after species select
-            speciesSelect.parentNode.parentNode.insertBefore(varDiv, speciesSelect.parentNode.nextSibling);
-
-            const varSelect = varDiv.querySelector('#variety-select');
-
-            // Logic when Variety is selected
-            const onVarietyChange = async () => {
-                const varId = varSelect.value;
-                if (!varId) return;
-
-                const selectedVar = varieties.find(v => v.uuid == varId);
-
-                // Clear again to avoid duplicates
-                visualSelect.innerHTML = '<option value="">Añadir mutación...</option>';
-
-                // 2. Load Mutations (mostly for Color)
-                const muts = await db.getMutations(null, varId);
-                if (muts && muts.length > 0) {
-                    visualSelect.innerHTML += groupAndSortMutations(muts);
-                } else if (sp.nombre_comun.toLowerCase() === 'canario' && !selectedVar.nombre.toLowerCase().includes('color')) {
-                    // 3. If no mutations and it's Posture/Song, check Breeds
-                    const breeds = await db.getBreeds(varId);
-                    if (breeds && breeds.length > 0) {
-                        // We might need a separate Breed selector or reuse visualSelect if simplified
-                        // User asked for "Types -> Mutations", but Posture has Breeds.
-                        // Let's populate the 'mutacion_visual' field with Breeds for display consistency or add a Breed field?
-                        // Current schema puts breeds in 'mutacion_visual' text often, strictly speaking it's a phenotype.
-                        // Let's reuse visual select but label it appropriately if we could, 
-                        // but simpler to just load them into the select.
-                        visualSelect.innerHTML += breeds.map(b => `<option value="${b.nombre}">${b.nombre}</option>`).join('');
-                        // Disable carriers for breeds
-                        carrierSelect.disabled = true;
-                    }
-                }
-                carrierSelect.innerHTML = visualSelect.innerHTML;
-                if (!carrierSelect.disabled) carrierSelect.disabled = false;
-            };
-
-            varSelect.addEventListener('change', onVarietyChange);
-
-            // Trigger if existing bird has variety
-            if (bird.variety_uuid) await onVarietyChange();
-
-        } else {
-            // No varieties, standard mutation load
-            console.log('Fetching standard mutations for:', sp.nombre_comun);
-            try {
-                const muts = await db.getMutations(sp.nombre_comun);
-                visualSelect.innerHTML += groupAndSortMutations(muts);
-                carrierSelect.innerHTML = visualSelect.innerHTML;
-            } catch (err) {
-                console.error(err);
-            }
+        if (bird.variety_uuid) {
+            loadMutations(bird.variety_uuid);
         }
     };
 
-    const populateParents = () => {
-        const id = parseInt(speciesSelect.value);
-        if (!id) return;
-        console.log('Populating parents for Species ID:', id);
-
-        // Debug filtering
-        const potentialFemales = allBirds.filter(b => b.id_especie == id && b.sexo == 'H');
-        console.log('Potential Mothers found:', potentialFemales.length, potentialFemales);
-
-        const males = allBirds.filter(b => b.id_especie == id && b.sexo == 'M' && (bird.id_ave ? b.id_ave != bird.id_ave : true));
-        const females = allBirds.filter(b => b.id_especie == id && b.sexo == 'H' && (bird.id_ave ? b.id_ave != bird.id_ave : true));
-
-        maleSelect.innerHTML = '<option value="">Desconocido</option>' + males.map(m => `<option value="${m.uuid}" ${bird.padre_uuid == m.uuid ? 'selected' : ''}>${m.anilla} (${m.estado})</option>`).join('');
-        femaleSelect.innerHTML = '<option value="">Desconocido</option>' + females.map(f => `<option value="${f.uuid}" ${bird.madre_uuid == f.uuid ? 'selected' : ''}>${f.anilla} (${f.estado})</option>`).join('');
+    const loadMutations = async (varietyUuid) => {
+        if (!varietyUuid) {
+            mutationSelect.innerHTML = '<option value="">Añadir Mutación...</option>';
+            return;
+        }
+        const res = await fetch(`/api/v2/genetics/varieties/${varietyUuid}/mutations`);
+        const mutations = await res.json();
+        mutationSelect.innerHTML = '<option value="">Añadir Mutación...</option>' +
+            mutations.map(m => `<option value="${m.uuid}" data-name="${m.nombre}">${m.nombre}</option>`).join('');
     };
 
-    speciesSelect.onchange = () => { loadMutations(); populateParents(); };
-    visualSelect.onchange = (e) => { if (e.target.value && !selectedVisual.includes(e.target.value)) { selectedVisual.push(e.target.value); renderTags('#visual-tags', selectedVisual, '#hidden-visual', 'visual'); } e.target.value = ''; };
-    carrierSelect.onchange = (e) => { if (e.target.value && !selectedCarrier.includes(e.target.value)) { selectedCarrier.push(e.target.value); renderTags('#carrier-tags', selectedCarrier, '#hidden-carrier', 'carrier'); } e.target.value = ''; };
+    const populateParents = () => {
+        const maleBirds = allBirds.filter(b => b.sexo === 'M' && b.uuid !== bird.uuid);
+        const femaleBirds = allBirds.filter(b => b.sexo === 'H' && b.uuid !== bird.uuid);
 
-    // Initial Load
-    if (bird.id_especie) {
-        loadMutations();
-        populateParents();
-    }
+        const maleSelect = form.querySelector('#parent-male');
+        const femaleSelect = form.querySelector('#parent-female');
 
-    renderTags('#visual-tags', selectedVisual, '#hidden-visual', 'visual');
-    renderTags('#carrier-tags', selectedCarrier, '#hidden-carrier', 'carrier');
+        maleSelect.innerHTML = '<option value="">Desconocido</option>' +
+            maleBirds.map(b => `<option value="${b.uuid}" ${bird.padre_uuid === b.uuid ? 'selected' : ''}>${b.anilla} (${b.especie || ''})</option>`).join('');
+        femaleSelect.innerHTML = '<option value="">Desconocido</option>' +
+            femaleBirds.map(b => `<option value="${b.uuid}" ${bird.madre_uuid === b.uuid ? 'selected' : ''}>${b.anilla} (${b.especie || ''})</option>`).join('');
+    };
+
+    speciesSelect.onchange = () => loadVarieties(speciesSelect.value);
+    varietySelect.onchange = () => loadMutations(varietySelect.value);
+    mutationSelect.onchange = (e) => {
+        if (e.target.value) {
+            const uuid = e.target.value;
+            const name = e.target.selectedOptions[0].dataset.name;
+            if (!selectedGenetica.find(g => g.mutacion_uuid === uuid)) {
+                selectedGenetica.push({ mutacion_uuid: uuid, mutacion: name, expresion: 'Visual' });
+                renderGeneticaTags();
+            }
+            mutationSelect.value = '';
+        }
+    };
+
+    // Initialize
+    if (speciesSelect.value) loadVarieties(speciesSelect.value);
+    populateParents();
+    renderGeneticaTags();
 
     form.onsubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(form);
-        const url = bird.id_ave ? `/api/birds/${bird.id_ave}` : '/api/birds';
-        const method = bird.id_ave ? 'PUT' : 'POST';
-        const res = await fetch(url, { method, body: formData });
-        if (res.ok) { modal.remove(); if (onSave) onSave(); }
-        else { const err = await res.json(); alert(err.error || 'Error'); }
-    };
+        const data = Object.fromEntries(formData.entries());
 
-    const btnCert = content.querySelector('#btn-cert');
-    if (btnCert) {
-        btnCert.onclick = () => {
-            window.open(`/api/birds/${bird.uuid}/certificate`, '_blank');
-        };
-    }
+        // Handle checkboxes
+        data.disponible_venta = form.querySelector('[name="disponible_venta"]').checked ? 1 : 0;
+        data.reservado = form.querySelector('[name="reservado"]').checked ? 1 : 0;
+
+        // Add genetics
+        data.genetica = selectedGenetica.map(g => ({
+            mutacion_uuid: g.mutacion_uuid,
+            expresion: g.expresion || 'Visual'
+        }));
+
+        const url = bird.uuid ? `/api/v2/birds/${bird.uuid}` : '/api/v2/birds/';
+        const method = bird.uuid ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                modal.remove();
+                if (onSave) onSave();
+            } else {
+                const err = await res.json();
+                alert('Error al guardar: ' + (err.error || 'Intente de nuevo'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error de conexión');
+        }
+    };
 
     content.querySelector('#close-modal').onclick = () => modal.remove();
     content.querySelector('#cancel-modal').onclick = () => modal.remove();
