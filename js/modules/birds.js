@@ -297,7 +297,22 @@ export async function openBirdModal({ birdId = null, initialData = {}, onSave = 
                                 <label>Especie *</label>
                                 <select id="species-select" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
                                     <option value="">Seleccionar Especie...</option>
-                                    ${loadedSpecies.map(s => `<option value="${s.uuid}" ${bird.especie === s.nombre_comun ? 'selected' : ''}>${s.nombre_comun}</option>`).join('')}
+                                    ${(() => {
+            const groups = {};
+            loadedSpecies.forEach(s => {
+                const g = s.grupo || 'Sin Grupo';
+                if (!groups[g]) groups[g] = [];
+                groups[g].push(s);
+            });
+            return Object.entries(groups)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([group, spp]) => `
+                                                <optgroup label="${group.toUpperCase()}">
+                                                    ${spp.sort((a, b) => a.nombre_comun.localeCompare(b.nombre_comun))
+                        .map(s => `<option value="${s.uuid}" ${bird.especie_uuid === s.uuid || bird.especie === s.nombre_comun ? 'selected' : ''}>${s.nombre_comun}</option>`).join('')}
+                                                </optgroup>
+                                            `).join('');
+        })()}
                                 </select>
                             </div>
                             <div id="variety-container">

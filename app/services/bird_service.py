@@ -101,10 +101,25 @@ class BirdService:
         try:
             genetics_data = data.pop('genetica', None)
             
+            # Clean and convert data types (same as create_bird)
+            for key in list(data.keys()):
+                if data[key] == '':
+                    data[key] = None
+            
+            # Convert fecha_nacimiento
+            if data.get('fecha_nacimiento') and isinstance(data['fecha_nacimiento'], str):
+                from datetime import datetime as dt
+                try:
+                    data['fecha_nacimiento'] = dt.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
+                except ValueError:
+                    data['fecha_nacimiento'] = None
+            
             # Update main bird record
             for key, value in data.items():
-                if hasattr(bird, key):
+                if hasattr(bird, key) and key != 'uuid':
                     setattr(bird, key, value)
+            
+            bird.updated_at = datetime.utcnow().isoformat()
             
             # Update genetics if provided
             if genetics_data is not None:

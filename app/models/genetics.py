@@ -1,7 +1,14 @@
 from app.extensions import db
 from app.models.base import BaseModel, TimestampMixin, SoftDeleteMixin
 
-class Especie(BaseModel, TimestampMixin):
+class GrupoEspecie(BaseModel):
+    __tablename__ = 'grupos_especies'
+    uuid = db.Column(db.String, primary_key=True)
+    nombre = db.Column(db.String, unique=True, nullable=False)
+    
+    especies = db.relationship('Especie', backref='grupo', lazy=True)
+
+class Especie(BaseModel, TimestampMixin, SoftDeleteMixin):
     __tablename__ = 'especies'
 
     id_especie = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -18,12 +25,18 @@ class Especie(BaseModel, TimestampMixin):
     notas = db.Column(db.String)
     tiene_mutaciones = db.Column(db.Boolean, default=False)
     es_propio = db.Column(db.Boolean, default=False)
+    grupo_uuid = db.Column(db.String, db.ForeignKey('grupos_especies.uuid'))
 
     # Relationships
     variedades = db.relationship('Variedad', 
                                  primaryjoin='Especie.uuid==foreign(Variedad.especie_uuid)',
                                  backref='especie', 
                                  lazy=True)
+
+    def to_dict(self):
+        d = super().to_dict()
+        d['grupo'] = self.grupo.nombre if self.grupo else None
+        return d
 
 
 class Variedad(BaseModel, TimestampMixin, SoftDeleteMixin):
