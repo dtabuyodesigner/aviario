@@ -1,186 +1,28 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="aviario.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="8620"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="mutaciones" custom_title="0" dock_id="1" table="4,10:mainmutaciones"/><dock_state state="000000ff00000000fd00000001000000020000054c0000022efc0100000001fb000000160064006f0063006b00420072006f007700730065003101000000000000054c0000012a00ffffff000002af0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="bird_mutations" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="0" mode="1"/></sort><column_widths><column index="1" value="289"/><column index="2" value="46"/><column index="3" value="93"/><column index="4" value="67"/><column index="5" value="86"/><column index="6" value="156"/><column index="7" value="156"/><column index="8" value="71"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="bird_ownership_history" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="39"/><column index="2" value="48"/><column index="3" value="63"/><column index="4" value="69"/><column index="5" value="63"/><column index="6" value="90"/><column index="7" value="72"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="canary_breeds" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="148"/><column index="2" value="156"/><column index="3" value="132"/><column index="4" value="62"/><column index="5" value="156"/><column index="6" value="76"/><column index="7" value="71"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="canary_breeds_old" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="289"/><column index="2" value="72"/><column index="3" value="132"/><column index="4" value="62"/><column index="5" value="80"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="configuracion" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="63"/><column index="2" value="106"/><column index="3" value="47"/><column index="4" value="125"/><column index="5" value="300"/><column index="6" value="67"/><column index="7" value="78"/><column index="8" value="179"/><column index="9" value="148"/><column index="10" value="86"/><column index="11" value="156"/><column index="12" value="129"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="contactos" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="79"/><column index="2" value="62"/><column index="3" value="139"/><column index="4" value="48"/><column index="5" value="65"/><column index="6" value="57"/><column index="7" value="39"/><column index="8" value="64"/><column index="9" value="265"/><column index="10" value="39"/><column index="11" value="63"/><column index="12" value="72"/><column index="13" value="76"/><column index="14" value="71"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="cruces" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="59"/><column index="2" value="67"/><column index="3" value="72"/><column index="4" value="86"/><column index="5" value="117"/><column index="6" value="54"/><column index="7" value="118"/><column index="8" value="85"/><column index="9" value="39"/><column index="10" value="63"/><column index="11" value="72"/><column index="12" value="76"/><column index="13" value="71"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="mutaciones" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="281"/><column index="2" value="172"/><column index="3" value="164"/><column index="4" value="101"/><column index="5" value="72"/><column index="6" value="156"/><column index="7" value="156"/><column index="8" value="71"/><column index="9" value="226"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">BEGIN TRANSACTION;
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="aviario.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="8620"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="bird_mutations" custom_title="0" dock_id="1" table="4,14:mainbird_mutations"/><dock_state state="000000ff00000000fd00000001000000020000000000000000fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000012000ffffff000000000000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">CREATE TABLE IF NOT EXISTS catalogo_herencia (
+    codigo TEXT PRIMARY KEY,
+    descripcion TEXT
+);
 
-----------------------------------------------------
--- Crear tabla grupos si no existe
-----------------------------------------------------
-CREATE TABLE IF NOT EXISTS grupos_especies (
+visual
+portador
+doble_factor
+CREATE TABLE IF NOT EXISTS pajaros (
     uuid TEXT PRIMARY KEY,
-    nombre TEXT NOT NULL UNIQUE
+    anilla TEXT,
+    nombre TEXT,
+    especie_uuid TEXT,
+    variedad_uuid TEXT,
+    sexo TEXT,
+    fecha_nacimiento TEXT,
+    padre_uuid TEXT,
+    madre_uuid TEXT,
+    criador_uuid TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    deleted_at TEXT,
+    sync_version INTEGER DEFAULT 1,
+    FOREIGN KEY (especie_uuid) REFERENCES especies(uuid),
+    FOREIGN KEY (variedad_uuid) REFERENCES variedades(uuid)
 );
 
-----------------------------------------------------
--- Insertar grupos completos
-----------------------------------------------------
-INSERT OR IGNORE INTO grupos_especies VALUES
-('grp-agapornis','Agapornis'),
-('grp-amazonas','Amazonas'),
-('grp-cacatuas','Cacatúas'),
-('grp-guacamayos','Guacamayos'),
-('grp-cotorras-conuros','Cotorras y Conuros'),
-('grp-periquitos','Periquitos'),
-('grp-loros-africanos','Loros Africanos y Pionus'),
-('grp-canarios','Canarios'),
-('grp-fauna-europea','Fauna Europea'),
-('grp-exoticos','Exóticos / Pinzones'),
-('grp-palomas','Palomas Ornamentales');
-
-----------------------------------------------------
--- AGAPORNIS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-agapornis'
-WHERE LOWER(nombre_comun) LIKE 'agapornis%';
-
-----------------------------------------------------
--- AMAZONAS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-amazonas'
-WHERE LOWER(nombre_comun) LIKE 'amazona%';
-
-----------------------------------------------------
--- CACATÚAS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-cacatuas'
-WHERE nombre_comun IN (
-'Cacatúa de Goffin',
-'Cacatúa galerita',
-'Corella rosada'
-);
-
-----------------------------------------------------
--- GUACAMAYOS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-guacamayos'
-WHERE nombre_comun LIKE 'Guacamayo%';
-
-----------------------------------------------------
--- COTORRAS Y CONUROS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-cotorras-conuros'
-WHERE nombre_comun IN (
-'Cotorra alejandrina',
-'Cotorra bigotuda',
-'Cotorra cabeza ciruela',
-'Cotorra de Kramer',
-'Cotorra mejillas verdes',
-'Conuro cabeza durazno',
-'Conuro del sol',
-'Conuro jandaya',
-'Conuro mitrado',
-'Maracaná',
-'Pirrura frente roja',
-'Pirrura perlada',
-'Pirrura molinae'
-);
-
-----------------------------------------------------
--- PERIQUITOS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-periquitos'
-WHERE nombre_comun IN (
-'Periquito',
-'Periquito australiano',
-'Periquito barbín naranja',
-'Perruche cola azul',
-'Neofema espléndida'
-);
-
-----------------------------------------------------
--- LOROS AFRICANOS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-loros-africanos'
-WHERE nombre_comun IN (
-'Gris',
-'Perico gris africano',
-'Loro senegal',
-'Loro Meyer',
-'Loro cabeza de halcón',
-'Loro pionus cabeza azul'
-);
-
-----------------------------------------------------
--- CANARIOS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-canarios'
-WHERE nombre_comun LIKE 'Canario%';
-
-----------------------------------------------------
--- FAUNA EUROPEA
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-fauna-europea'
-WHERE nombre_comun IN (
-'Jilguero',
-'Verderón',
-'Verdecillo',
-'Lúgano'
-);
-
-----------------------------------------------------
--- EXÓTICOS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-exoticos'
-WHERE nombre_comun IN (
-'Diamante mandarín',
-'Diamante de Gould',
-'Diamante de Java',
-'Java sparrow',
-'Bengalese finch',
-'Capuchino tricolor',
-'Isabelita de Japón',
-'Munia',
-'Cebra finch',
-'Mandarín',
-'Timet'
-);
-
-----------------------------------------------------
--- PALOMAS
-----------------------------------------------------
-UPDATE especies SET grupo_uuid='grp-palomas'
-WHERE nombre_comun = 'Paloma de Java';
-
-COMMIT;
-</sql><sql name="SQL 2">DELETE FROM variedad_mutaciones
-WHERE mutacion_uuid NOT IN (
-    SELECT m1.uuid
-    FROM mutaciones m1
-    WHERE m1.rowid IN (
-        SELECT MIN(rowid)
-        FROM mutaciones
-        GROUP BY nombre
-    )
-);
-
-
-SELECT nombre, COUNT(*)
-FROM mutaciones
-GROUP BY nombre
-HAVING COUNT(*) &gt; 1;
-</sql><sql name="SQL 3">INSERT INTO variedad_mutaciones
-(uuid,variedad_uuid,mutacion_uuid,created_at)
-SELECT lower(hex(randomblob(16))), v.uuid, 'mut-aga-roseicollis-aqua',CURRENT_TIMESTAMP
-FROM variedades v
-WHERE v.nombre='Aqua'
-AND v.especie_uuid='ESP_ROSEICOLLIS_UUID';
-</sql><sql name="SQL 4">CREATE TABLE cruces_geneticos (
-    uuid TEXT PRIMARY KEY,
-    macho_uuid TEXT,
-    hembra_uuid TEXT,
-    resultado_json TEXT
-);
-</sql><sql name="SQL 6">DELETE FROM variedad_mutaciones
-WHERE mutacion_uuid NOT IN (
-    SELECT m1.uuid
-    FROM mutaciones m1
-    WHERE m1.rowid IN (
-        SELECT MIN(rowid)
-        FROM mutaciones
-        GROUP BY nombre
-    )
-);
-
-</sql><sql name="SQL 7">INSERT INTO variedad_mutaciones
-SELECT lower(hex(randomblob(16))), v.uuid,'mut-aga-roseicollis-cara-naranja',CURRENT_TIMESTAMP
-FROM variedades v
-WHERE v.nombre='Cara naranja'
-AND v.especie_uuid='ESP_ROSEICOLLIS_UUID';
-</sql><current_tab id="3"/></tab_sql></sqlb_project>
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
